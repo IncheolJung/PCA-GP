@@ -11,7 +11,6 @@ from joblib import Parallel, delayed
 
 from datareader import *
 from acquisitionfunctions import *
-from gp_Kenny import train_model_gp_Kenny
 
 # -----------------------
 # Mock solver placeholder
@@ -50,6 +49,7 @@ def train_gp(X, Y, terms: int = 1):
     #     gp_i.fit(X, Y.imag)
     return gp_r, gp_i
 
+# from gp_Kenny import train_model_gp_Kenny
 # train_gp = train_model_gp_Kenny
 
 class dummy_preprocesser:

@@ -1,9 +1,10 @@
-import glob, os, sys
+import os, sys
 import numpy as np
 from pathlib import Path
 from scipy.spatial import cKDTree
 from typing import Iterable
 from itertools import product
+from joblib import Parallel, delayed
 
 
 class fileIOdatareader:
@@ -61,30 +62,65 @@ class OnFlySolver:
         self.workingpath = Path(workingpath).absolute().__str__()
         self.model_name = model_name
         self.in_file = Path(f"{model_name}.in")
-        self.solver = "../VWT-IE-Solver-Unified-DG.x"
+        self.solver = Path("./data/VWT-data/VWT-IE-Solver-Unified-DG.x").absolute().__str__()
         self.freqs = init_freqs
         self.phi = np.array(angles)
         self.n_angles = len(angles)
         self.encoder = lambda x: round(float(x), precision)
         self.farfields = {}         # keys: (freq, angle), values: (cpol, xpol)
         self._init_in_file()        # init .in with dummy freq
+        self.tmp = {}               # tmp directories for simulations
+
+        # if len(self.freqs) > 0:
+        #     if len(self.freqs) > 1: # parallel if multiple freq
+        #         _run_one = lambda f: self.run(f)
+        #         freq_to_run = []
+        #         for freq in self.freqs:
+        #             if (self._is_data_exist(freq)): pass
+        #             else: freq_to_run.append(freq)
+        #         results = Parallel(n_jobs=4)(  # use 4 cores
+        #             delayed(_run_one)(f) for f in range(freq_to_run)
+        #         )
+        #         broken_runs = {i: r for i,r in enumerate(results) if r != 0}
+        #         if len(broken_runs): 
+        #             raise RuntimeError(f"Simulations broken: {broken_runs}")
+        #     else:       # sequential if one freq
+        #         for freq in self.freqs:
+        #             self.__call__(freq, self.phi[0])
+
         if len(self.freqs) > 0:
-            # self._tree = cKDTree(list(product(self.freqs, self.phi)))
             for freq in self.freqs:
                 self.__call__(freq, self.phi[0])
-        freqs_computed_before = [float(d.name) for d in Path(workingpath).glob("*/") if d.is_dir()]
+
+        def get_freqs_from_dir(workingpath):
+            def rm_r(path: Path):
+                if path.is_dir():
+                    for child in path.iterdir():
+                        rm_r(child)  # recurse into children
+                    path.rmdir()      # remove the now-empty directory
+                else:
+                    path.unlink()     # remove file or symlink
+            freqs = []
+            for d in Path(workingpath).glob("*/"):
+                if d.is_dir():
+                    try: freqs.append(float(d.name))
+                    except: rm_r(d)
+            return freqs
+        freqs_computed_before = get_freqs_from_dir(Path(workingpath))
         if len(freqs_computed_before) > 0:
-            # self._tree = cKDTree(list(product(self.freqs, self.phi)))
             for freq in freqs_computed_before:
-                # self.__call__(freq, self.phi[0])
                 self._load_farfield_data(f"{self.workingpath}/{freq}/{self.model_name}.efar")
             self.freqs.extend(list(sorted(freqs_computed_before)))
+
         return None
     
     def __call__(self, freq, angle):
         freq, angle = self.encoder(freq), self.encoder(angle)
         if (self._is_data_exist(freq)): pass
-        else: self.run(freq)
+        else: 
+            exit = self.run(freq)
+            if exit != 0:
+                raise RuntimeError(f"simulation error exit {exit}")
         # if ((freq, angle) not in self.farfields.keys()) :
         #     print(f"warning: (freq, angle) = ({freq}, {angle}) not found in self.farfields.keys()")
         #     print("type(freq):", type(freq))
@@ -116,25 +152,50 @@ class OnFlySolver:
         os.chdir(org_path)
         return 0
     
-    def _set_in_file(self, freq_query):
-        org_path = os.getcwd()
-        os.chdir(self.workingpath)
+    def _setup_in_file(self, freq_query):
+        "assume in self.workingpath && setup .in"
         in_data = self.in_file.open('r').readlines()
         n_angles, freq, loss_c, precond_mode, skeleton_c = in_data[1].split()
         in_data[1] = " ".join([str(self.n_angles), str(freq_query), loss_c, precond_mode, skeleton_c, "\n"])
         self.in_file.open('w').write("".join(in_data))
+        return 0
+    
+    def _setup_simulation(self, freq_query):
+        "mkdir ~tmp_$freq_query && cp $model_name.* $freq_query"
+        self.tmp[freq_query] = f"~tmp{len(self.tmp)+1}_{freq_query}"
+        working_path_now = self.tmp[freq_query]
+        os.mkdir(working_path_now)
+        self._cp_all_files(to_dir=working_path_now)
+        os.chdir(working_path_now)
+        return 0
+    
+    def _exit_simulation(self, freq_query, org_path):
+        "cd .. && mv ~tmp_$freq_query"
+        import re
+        os.chdir("../")
+        old_name = self.tmp[freq_query]
+        new_name = re.sub(r"^~tmp\d+_", "", old_name)
+        os.rename(old_name, new_name)
+        del self.tmp[freq_query]
         os.chdir(org_path)
         return 0
     
     def _cp_all_files(self, from_dir=".", to_dir=".", new_name=False):
-        import shutil
-        Path(to_dir).mkdir(exist_ok=True)
-        for f in glob.glob(f"{from_dir}/{self.model_name}.*"):
-            if new_name:
-                new_name_ = f.replace(f"{self.model_name}.", f"{new_name}.")
-            else:
-                new_name_ = f
-            shutil.copy2(f, f"{to_dir}/{new_name_}")
+        import glob, shutil
+        # Path(to_dir).mkdir(exist_ok=True)
+        # files_to_cp = list(glob.glob(f"{from_dir}/{self.model_name}.*"))
+        # for f in glob.glob(f"{from_dir}/{self.model_name}.*"):
+        #     if new_name:
+        #         new_name_ = f.replace(f"{self.model_name}.", f"{new_name}.")
+        #     else:
+        #         new_name_ = f
+        #     shutil.copy2(f, f"{to_dir}/{new_name_}")
+        from_dir = Path(from_dir)
+        to_dir   = Path(to_dir)
+        to_dir.mkdir(parents=True, exist_ok=True)
+        for f in from_dir.glob(f"{self.model_name}*.*"):
+            if f.is_file():
+                shutil.copy2(f, to_dir / f.name)
         return 0
     
     def _load_farfield_data(self, farfield_file: str, freq = None):
@@ -156,27 +217,38 @@ class OnFlySolver:
         freq_query = self.encoder(freq_query)
         org_path = os.getcwd()
         os.chdir(self.workingpath)
-        self._set_in_file(freq_query)
-        cmd = [self.solver, self.model_name, "|", "tee", f"{self.model_name}.log"]
+        self._setup_in_file(freq_query)
+        self._setup_simulation(freq_query)
         log_file_path = f"{self.model_name}.log"
-        with open(log_file_path, "w") as log_file:
-            # Start the process
-            prog = Popen(
-                [self.solver, self.model_name],
-                stdout=PIPE,
-                stderr=STDOUT,
-                text=True,   # makes stdout/stderr strings instead of bytes
-            )
+        log_monitor_path = f"{self.workingpath}/compute.log"
 
-            # Read stdout line by line, write to file and print to console
-            for line in prog.stdout:
-                # print(line, end='')      # print to console
-                log_file.write(line)      # write to log file
-                log_file.flush()          # flush after every line
-                sys.stdout.flush()        # optional: ensure console shows immediately
+        # Run simulation
+        log_file = open(log_file_path, "w")
+        log_monitor = open(log_monitor_path, "w")
+        # Start the process
+        prog = Popen(
+            [self.solver, self.model_name],
+            stdout=PIPE,
+            stderr=STDOUT,
+            text=True,   # makes stdout/stderr strings instead of bytes
+        )
 
-            prog.wait()
-        self._cp_all_files(to_dir=f"./{freq_query}")
-        self._load_farfield_data(f"./{freq_query}/{self.model_name}.efar")
-        os.chdir(org_path)
+        # Read stdout line by line, write to file and print to console
+        for line in prog.stdout:
+            # print(line, end='')      # print to console
+            log_file.write(line)      # write to log file
+            log_file.flush()          # flush after every line
+            log_monitor.write(line)      # write to log file
+            log_monitor.flush()          # flush after every line
+            sys.stdout.flush()        # optional: ensure console shows immediately
+
+        prog.wait()
+
+        log_file.close()
+        log_monitor.close()
+
+        # self._cp_all_files(to_dir=f"./{freq_query}")
+        # os.chdir(org_path)
+        self._load_farfield_data(f"./{self.model_name}.efar", freq_query)
+        self._exit_simulation(freq_query, org_path)
         return 0

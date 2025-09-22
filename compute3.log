@@ -1,0 +1,31 @@
+
+ ======  Simulation 1 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: min-max
+  >> n_init: 3
+  >> terms: 5
+  >> max_iter: 20
+  >> tol: 1e-05
+
+ ======  Simulation 1 Initialized  ====== 
+
+
+ ======  Adding Frequency Sample: 9524.065  ====== 
+
+
+ ======  Adding Frequency Sample: 10112.711  ====== 
+
+
+ ======  Adding Frequency Sample: 10326.275  ====== 
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.31187150540726266 0.07358430073132893
+
+Iteration 1 / 20: acquisition 0.0591436358 | variance 0.0591436358
+number of frequency samples: 3
+sampling new frequency 10498.450
+
+ ======  Adding Frequency Sample: 10498.45  ====== 
+

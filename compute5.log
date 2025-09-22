@@ -1,0 +1,16 @@
+
+ ======  Simulation 3 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: min-max
+  >> n_init: 3
+  >> terms: 5
+  >> max_iter: 20
+  >> tol: 1e-05
+
+ ======  Simulation 3 Initialized  ====== 
+
+
+ ======  Adding Frequency Sample: 9682.373  ====== 
+

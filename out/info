@@ -1,5 +1,0 @@
-solver: on-fly VWT-IE-United prime-airplane
-
-#	ac_fx		X_norm		n_init		tol		terms
-1-5	max-var		min-max	 	3		1e-5		5
-6-10	max-var		power	 	3		1e-5		5

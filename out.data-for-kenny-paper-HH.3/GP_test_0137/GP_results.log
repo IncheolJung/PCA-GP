@@ -1,0 +1,75 @@
+
+ ======  Simulation 137 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2914847958201697 0.02414051268543926
+
+Iteration 1 / 20: acquisition 0.0486195325 | variance 0.0486195325
+number of frequency samples: 3
+sampling new frequency 9500.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.31409877211211307 0.01700060701605028
+
+Iteration 2 / 20: acquisition 0.0189867697 | variance 0.0189867697
+number of frequency samples: 4
+sampling new frequency 10140.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.34229018280521467 0.006227882908856956
+
+Iteration 3 / 20: acquisition 0.0012540568 | variance 0.0012540568
+number of frequency samples: 5
+sampling new frequency 10500.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3617438889500642 0.004475541309099627
+
+Iteration 4 / 20: acquisition 0.0016180949 | variance 0.0016180949
+number of frequency samples: 6
+sampling new frequency 9620.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.3929140526755651 0.001126389093568009
+
+Iteration 5 / 20: acquisition 0.0014791982 | variance 0.0014791982
+number of frequency samples: 7
+sampling new frequency 10240.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.41669126434035697 0.000476172010662338
+
+Iteration 6 / 20: acquisition 0.0000159089 | variance 0.0000159089
+number of frequency samples: 8
+sampling new frequency 10010.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.4482919208788913 0.00020575573298298145
+
+Iteration 7 / 20: acquisition 0.0000215768 | variance 0.0000215768
+number of frequency samples: 9
+sampling new frequency 9690.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.4765610000102826 0.00015457422526327905
+
+Iteration 8 / 20: acquisition 0.0000132903 | variance 0.0000132903
+number of frequency samples: 10
+sampling new frequency 10320.000
+number of basis updated: 9 -> 10
+S[0, r] =  0.49575791225387933 0.00012894794440289876
+
+Iteration 9 / 20: acquisition 0.0000062853 | variance 0.0000062853
+number of frequency samples: 11
+sampling new frequency 10440.000
+number of basis updated: 10 -> 11
+S[0, r] =  0.5148303045355661 0.0001219752625888247
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	9	/	20
+  >> Final acquisition:	6.285320628498554e-06
+  >> Final variance:	6.285320628498554e-06
+  >> total n_freq:	12
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.00010766116135131624

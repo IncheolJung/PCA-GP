@@ -1,0 +1,117 @@
+
+ ======  Simulation 92 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2833422109780494 0.028224535609956896
+
+Iteration 1 / 20: acquisition 0.0061875229 | variance 0.0061875229
+number of frequency samples: 3
+sampling new frequency 10500.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.30477100181977607 0.021330738307977853
+
+Iteration 2 / 20: acquisition 0.0049971309 | variance 0.0049971309
+number of frequency samples: 4
+sampling new frequency 9500.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.32391448736612455 0.01468832173070851
+
+Iteration 3 / 20: acquisition 0.0020906294 | variance 0.0020906294
+number of frequency samples: 5
+sampling new frequency 9880.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.36222428283600583 0.004564319891315317
+
+Iteration 4 / 20: acquisition 0.0023790107 | variance 0.0023790107
+number of frequency samples: 6
+sampling new frequency 10400.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.38687526040214804 0.0010467982439733771
+
+Iteration 5 / 20: acquisition 0.0003679994 | variance 0.0003679994
+number of frequency samples: 7
+sampling new frequency 10190.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.4222924097282353 0.00012212679735569697
+
+Iteration 6 / 20: acquisition 0.0000193342 | variance 0.0000193342
+number of frequency samples: 8
+sampling new frequency 10010.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.4559394262600474 0.00012079135192710777
+
+Iteration 7 / 20: acquisition 0.0001708841 | variance 0.0001708841
+number of frequency samples: 9
+sampling new frequency 9570.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.46962228102439696 0.00011915257074329666
+
+Iteration 8 / 20: acquisition 0.0000243748 | variance 0.0000243748
+number of frequency samples: 10
+sampling new frequency 9760.000
+number of basis updated: 9 -> 10
+S[0, r] =  0.4958900711537645 0.00011817314759133279
+
+Iteration 9 / 20: acquisition 0.0000287373 | variance 0.0000287373
+number of frequency samples: 11
+sampling new frequency 10460.000
+number of basis updated: 10 -> 11
+S[0, r] =  0.5111601619453212 0.00010421295259866172
+
+Iteration 10 / 20: acquisition 0.0002780628 | variance 0.0002780628
+number of frequency samples: 12
+sampling new frequency 10060.000
+number of basis updated: 11 -> 12
+S[0, r] =  0.5384340385039471 0.00010347489179488355
+
+Iteration 11 / 20: acquisition 0.0000263694 | variance 0.0000263694
+number of frequency samples: 13
+sampling new frequency 9710.000
+number of basis updated: 12 -> 13
+S[0, r] =  0.5600096265809733 0.00010143749661162194
+
+Iteration 12 / 20: acquisition 0.0000253694 | variance 0.0000253694
+number of frequency samples: 14
+sampling new frequency 10300.000
+number of basis updated: 13 -> 14
+S[0, r] =  0.5789403783208101 9.010033647299951e-05
+
+Iteration 13 / 20: acquisition 0.0000123439 | variance 0.0000123439
+number of frequency samples: 15
+sampling new frequency 9510.000
+number of basis updated: 14 -> 15
+S[0, r] =  0.5911488809220768 8.82808639684243e-05
+
+Iteration 14 / 20: acquisition 0.0000108040 | variance 0.0000108040
+number of frequency samples: 16
+sampling new frequency 10420.000
+number of basis updated: 15 -> 16
+S[0, r] =  0.6065227459717331 8.70666432868675e-05
+
+Iteration 15 / 20: acquisition 0.0000166198 | variance 0.0000166198
+number of frequency samples: 17
+sampling new frequency 9940.000
+number of basis updated: 16 -> 17
+S[0, r] =  0.6286007947151157 8.529252223839119e-05
+
+Iteration 16 / 20: acquisition 0.0000042453 | variance 0.0000042453
+number of frequency samples: 18
+sampling new frequency 9820.000
+number of basis updated: 17 -> 18
+S[0, r] =  0.6506911057531165 8.334609383591447e-05
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	16	/	20
+  >> Final acquisition:	4.245263185027137e-06
+  >> Final variance:	4.245263185027137e-06
+  >> total n_freq:	19
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 5.20505867234139e-05

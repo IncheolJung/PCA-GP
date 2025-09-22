@@ -1,0 +1,65 @@
+
+ ======  Simulation 128 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: upper confidence bound
+  >> X normalization strategy: z-score
+  >> n_init: 3
+  >> terms: 5
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2751418168278979 0.10136004195476493
+
+Iteration 1 / 20: acquisition 2.7140996653 | variance 0.0101183051
+number of frequency samples: 3
+sampling new frequency 9510.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.29777473611484706 0.07021179906464785
+
+Iteration 2 / 20: acquisition 3.2736925215 | variance 0.0175447329
+number of frequency samples: 4
+sampling new frequency 9680.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.3473207662237406 0.0077740239699612
+
+Iteration 3 / 20: acquisition 2.0077624506 | variance 0.0053406045
+number of frequency samples: 5
+sampling new frequency 10490.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3631314159175124 0.006336630895539748
+
+Iteration 4 / 20: acquisition 1.1340716978 | variance 0.0011166215
+number of frequency samples: 6
+sampling new frequency 9940.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.39761625912341686 0.001190981366914458
+
+Iteration 5 / 20: acquisition 0.9617324511 | variance 0.0004900437
+number of frequency samples: 7
+sampling new frequency 9880.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.43735776992302444 0.00025615116959094516
+
+Iteration 6 / 20: acquisition 0.9724355922 | variance 0.0004085657
+number of frequency samples: 8
+sampling new frequency 9810.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.47685423757197415 0.000156304280915141
+
+Iteration 7 / 20: acquisition 0.7211836897 | variance 0.0000062965
+number of frequency samples: 9
+sampling new frequency 9840.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.5144772987541796 0.00014079146385081122
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	7	/	20
+  >> Final acquisition:	0.7211836897235109
+  >> Final variance:	6.2965211595460025e-06
+  >> total n_freq:	10
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE:0.000316477992

@@ -1,0 +1,63 @@
+
+ ======  Simulation 114 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2649341330015811 0.12542900419014233
+
+Iteration 1 / 20: acquisition 0.0068565255 | variance 0.0068565255
+number of frequency samples: 3
+sampling new frequency 9500.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.30028358834444113 0.06325304104401216
+
+Iteration 2 / 20: acquisition 0.0225601526 | variance 0.0225601526
+number of frequency samples: 4
+sampling new frequency 10200.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.3302458644998345 0.023268274613286417
+
+Iteration 3 / 20: acquisition 0.0093198671 | variance 0.0093198671
+number of frequency samples: 5
+sampling new frequency 9750.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3716947712680374 0.0036968976675138873
+
+Iteration 4 / 20: acquisition 0.0016620351 | variance 0.0016620351
+number of frequency samples: 6
+sampling new frequency 10440.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.3907564064896709 0.0015484182660895106
+
+Iteration 5 / 20: acquisition 0.0004137036 | variance 0.0004137036
+number of frequency samples: 7
+sampling new frequency 9920.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.4251765028464087 0.0003793763147778677
+
+Iteration 6 / 20: acquisition 0.0000141762 | variance 0.0000141762
+number of frequency samples: 8
+sampling new frequency 10500.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.44339656295964447 0.00022845657137216286
+
+Iteration 7 / 20: acquisition 0.0000079788 | variance 0.0000079788
+number of frequency samples: 9
+sampling new frequency 9590.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.46657367978881803 0.0002238671888655494
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	7	/	20
+  >> Final acquisition:	7.978808105236184e-06
+  >> Final variance:	7.978808105236184e-06
+  >> total n_freq:	10
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.0008018629763941457

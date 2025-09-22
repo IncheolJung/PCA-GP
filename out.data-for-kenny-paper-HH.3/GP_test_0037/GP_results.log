@@ -1,0 +1,69 @@
+
+ ======  Simulation 37 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.27895897503147005 0.05171025188486302
+
+Iteration 1 / 20: acquisition 0.0049457063 | variance 0.0049457063
+number of frequency samples: 3
+sampling new frequency 9500.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.3011948958468904 0.04183356708961403
+
+Iteration 2 / 20: acquisition 0.0034679270 | variance 0.0034679270
+number of frequency samples: 4
+sampling new frequency 10500.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.32569424233922567 0.023776504676648824
+
+Iteration 3 / 20: acquisition 0.0032687039 | variance 0.0032687039
+number of frequency samples: 5
+sampling new frequency 9910.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3594558221266239 0.007812112807178688
+
+Iteration 4 / 20: acquisition 0.0031226637 | variance 0.0031226637
+number of frequency samples: 6
+sampling new frequency 10410.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.3895508475026178 0.0012328586194491355
+
+Iteration 5 / 20: acquisition 0.0033989091 | variance 0.0033989091
+number of frequency samples: 7
+sampling new frequency 9790.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.41866692229259106 0.0004885127453612559
+
+Iteration 6 / 20: acquisition 0.0066919820 | variance 0.0066919820
+number of frequency samples: 8
+sampling new frequency 9850.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.4531489278499142 0.00020153432539535173
+
+Iteration 7 / 20: acquisition 0.0014840993 | variance 0.0014840993
+number of frequency samples: 9
+sampling new frequency 10330.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.47442433230040415 0.00013866084071746277
+
+Iteration 8 / 20: acquisition 0.0000015044 | variance 0.0000015044
+number of frequency samples: 10
+sampling new frequency 9550.000
+number of basis updated: 9 -> 10
+S[0, r] =  0.4918320558537594 0.00013472289411694134
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	8	/	20
+  >> Final acquisition:	1.50439330656386e-06
+  >> Final variance:	1.50439330656386e-06
+  >> total n_freq:	11
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.0005509233070887176

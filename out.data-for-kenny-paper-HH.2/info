@@ -1,0 +1,28 @@
+solver: data-for-kenny-paper-HH.npz
+
+#	ac_fx		x_norm		n_init		tol
+1-4	max-var		pass	 	3		1e-6
+5-8	max-var		z-score	 	3		1e-6
+9-12	max-var		min-max	 	3		1e-6
+13-16	max-var		power	 	3		1e-6
+17-20	max-var		std-power	3		1e-6
+21-24	max-var		s-z-score	3		1e-6
+25-28	EI		pass	 	3		1e-6
+29-32	EI		z-score	 	3		1e-6
+33-36	EI		min-max	 	3		1e-6
+37-40	EI		power	 	3		1e-6
+41-44	EI		std-power	3		1e-6
+45-48	EI		s-z-score	3		1e-6
+49-52	UCB		pass	 	3		1e-6
+53-56	UCB		z-score	 	3		1e-6
+57-60	UCB		min-max	 	3		1e-6
+61-64	UCB		power	 	3		1e-6
+65-68	UCB		std-power	3		1e-6
+69-72	UCB		s-z-score	3		1e-6
+
+73-74	EI-mod		pass	 	3		1e-6
+75-78	EI-mod		z-score	 	3		1e-6
+79-82	EI-mod		min-max	 	3		1e-6
+83-86	EI-mod		power	 	3		1e-6
+87-90	EI-mod		std-power	3		1e-6
+91-94	EI-mod		s-z-score	3		1e-6

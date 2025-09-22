@@ -1,0 +1,235 @@
+ Last Built Begin in Sep 21 2025 00:06:12
+ Pre-Type( Input ):            8
+ Skl-Tol ( Input ):    1.0000000000000000E-002
+ Wavelength in freespace: 0.205061
+
+ ################################################
+ ##         Generating Required Mesh          ##
+ ##         Waiting.....                      ##
+ ################################################
+ Subd No.      Subd Name
+    1    sphere1                                                           
+ isub,  nnode, npatch,  nedge:
+    1       604      1204      1806
+ Scale Factor         >>   9.99999978E-03
+ ################################################
+
+ START TIME: 20250922   002709.032
+
+
+ Informaton for IE geometry:
+ number of subdomains     : 1
+ maxnode,maxpatch,maxedge : 604  1204  1806
+ 
+ Index of Mat-Reg: 1
+ Mat-Reg Number via MatFlg: 1
+ Edge Number of Mat-Reg: 1, 1806
+
+ Number of Edge on PEC: 0
+ Mat-Reg: No Dim(m) Lmax:
+    1 0.244    2
+ Totlmax, add1, add2:           2           3           4
+ rlengmax of Global MLFMA >>   0.24383031880104544     
+ Lmax of Global MLFMA >>            2
+ Wavenum of Mat-Reg:
+    1 1.000
+
+ total area in sq m           =      0.1254
+ total area in sq lambda      =      2.9810
+ maxnode, maxpatch, maxedge           =      604     1204     1806
+ longest  edge in lambda              =      0.1062
+ shortest edge in lambda              =      0.0463
+ average  edge in lambda              =      0.0758
+ largest  patch area in sq lambda     =      0.0041
+ smallest patch area in sq lambda     =      0.0012
+ ave    surface area in sq lambda     =      0.0025
+ size range of the object in sq lambda =      0.9753
+
+ #### MLFMA Info For Each Region ####
+ Mat-Region =            1
+ Array dimension parameters:
+ maxrule=          14   maxgrid  =          64
+ lmax   =           2   ncmax    =          65
+ lsmax  =           7   lsmin    =           7
+ kpm    =         102   kp0      =         102
+ ntlm   =       32232   nsm      =        5712
+ nkpm   =         102   niplm    =        6528
+ ngnearm=         632   ngsndm   =        2504
+ nearm  =         413   mfinestm =          43
+ ###############################
+
+ CFIE Alpha:  0.50000000000000000     
+
+ Fill MLFMA FI for Mat-Reg:           1
+ Begin filltl.f
+ fill translation matrix
+ Level:            2
+ fill shifting matrix
+ translator time(s):   3.20000015E-02
+ fill interpolation matrix
+ Filling TL                  Delta_CPU=          0.14 Memory(MB)=         72.38
+ Filling sndgrp              Delta_CPU=          0.00 Memory(MB)=         72.38
+ Filling VFS                 Delta_CPU=          0.32 Memory(MB)=         72.38
+
+ Fill MLFMA NI for Mat-Reg:           1
+ Begin fill sparser part of Nearfield
+ Begin fill denser part of Nearfield
+ End fill
+ Filling Amn                 Delta_CPU=         10.29 Memory(MB)=         72.38
+
+
+ Now testing preconditioner with
+ ipretype =            8
+ method = cfie_solve_nfpre_pardiso
+
+  
+ NBP>>Begin fill sparser part of Nearfield
+ NBP>>Begin fill denser part of Nearfield
+
+201.7857%
+ Begin MLFMA Box-Matrix Based Prec Constructor
+ --- Intel MKL PARDISO --- 
+  >> Solver Initialized
+  >> Proceed to ngrp_box loop
+  >> Loop 0 Initialized
+ Memory for iGRP: 1 0 MB
+ Total Memory For NFB Pre: 0 MB
+ --- PARDISO PRECONDITIONER INITIALIZED --- 
+ Constructing preconditioner CPU time: 0 s
+ 
+ 108360
+ Memory for Iteration:: 1.65344 MB
+
+ Iseg, Ninc_S : 1, 181, 0
+
+ Iseg, Skeleton Angles: 1, 9
+ Iseg, Skel-Pk Mem(MB): 1, 30.96
+
+ Iseg, Irank, Idinc : 1, 1, 1
+ Thata, Phi : 90.000000, 0.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.729323e-01
+ 1  7.128713e-02
+ 2  3.175223e-02
+ 3  1.289133e-02
+ 4  5.819837e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00581984
+
+ Iseg, Irank, Idinc : 1, 2, 136
+ Thata, Phi : 90.000000, 135.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.723854e-01
+ 1  7.006502e-02
+ 2  3.287268e-02
+ 3  1.390964e-02
+ 4  6.337668e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00633767
+
+ Iseg, Irank, Idinc : 1, 3, 53
+ Thata, Phi : 90.000000, 52.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.733014e-01
+ 1  7.038451e-02
+ 2  3.304948e-02
+ 3  1.370640e-02
+ 4  6.230393e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00623039
+
+ Iseg, Irank, Idinc : 1, 4, 181
+ Thata, Phi : 90.000000, 180.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.745514e-01
+ 1  6.942371e-02
+ 2  3.081863e-02
+ 3  1.282237e-02
+ 4  5.758957e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00575896
+
+ Iseg, Irank, Idinc : 1, 5, 95
+ Thata, Phi : 90.000000, 94.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.805039e-01
+ 1  7.452187e-02
+ 2  3.414124e-02
+ 3  1.412785e-02
+ 4  6.488594e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00648859
+
+ Iseg, Irank, Idinc : 1, 6, 26
+ Thata, Phi : 90.000000, 25.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.731587e-01
+ 1  7.138853e-02
+ 2  3.267053e-02
+ 3  1.345226e-02
+ 4  6.081407e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00608141
+
+ Iseg, Irank, Idinc : 1, 7, 161
+ Thata, Phi : 90.000000, 160.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.727009e-01
+ 1  6.884211e-02
+ 2  3.130717e-02
+ 3  1.303814e-02
+ 4  5.842161e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00584216
+
+ Iseg, Irank, Idinc : 1, 8, 74
+ Thata, Phi : 90.000000, 73.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.769911e-01
+ 1  7.257077e-02
+ 2  3.376340e-02
+ 3  1.396790e-02
+ 4  6.431957e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00643196
+
+ Iseg, Irank, Idinc : 1, 9, 117
+ Thata, Phi : 90.000000, 116.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  3612
+ Residual error:0.010000
+ 0  1.774212e-01
+ 1  7.255545e-02
+ 2  3.339758e-02
+ 3  1.387970e-02
+ 4  6.249754e-03
+ Iteration CPU time: 0 s
+ CFIE residual: 0.00624975
+ Last Built End in Sep 21 2025 00:06:12
+ Total CPU time: 2 s
+ Finished.

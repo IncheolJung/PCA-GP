@@ -1,0 +1,86 @@
+ Last Built Begin in Sep 21 2025 00:06:12
+ Pre-Type( Input ):            8
+ Skl-Tol ( Input ):    1.0000000000000000E-002
+ Wavelength in freespace: 0.276074
+
+ ################################################
+ ##         Generating Required Mesh          ##
+ ##         Waiting.....                      ##
+ ################################################
+ Subd No.      Subd Name
+    1    sphere1                                                           
+ isub,  nnode, npatch,  nedge:
+    1       604      1204      1806
+ Scale Factor         >>   9.99999978E-03
+ ################################################
+
+ START TIME: 20250922   003107.396
+
+
+ Informaton for IE geometry:
+ number of subdomains     : 1
+ maxnode,maxpatch,maxedge : 604  1204  1806
+ 
+ Index of Mat-Reg: 1
+ Mat-Reg Number via MatFlg: 1
+ Edge Number of Mat-Reg: 1, 1806
+
+ Number of Edge on PEC: 0
+ Mat-Reg: No Dim(m) Lmax:
+    1 0.181    2
+ Totlmax, add1, add2:           2           3           4
+ rlengmax of Global MLFMA >>   0.18111115587244112     
+ Lmax of Global MLFMA >>            2
+ Wavenum of Mat-Reg:
+    1 1.000
+
+ total area in sq m           =      0.1254
+ total area in sq lambda      =      1.6447
+ maxnode, maxpatch, maxedge           =      604     1204     1806
+ longest  edge in lambda              =      0.0789
+ shortest edge in lambda              =      0.0344
+ average  edge in lambda              =      0.0563
+ largest  patch area in sq lambda     =      0.0022
+ smallest patch area in sq lambda     =      0.0007
+ ave    surface area in sq lambda     =      0.0014
+ size range of the object in sq lambda =      0.7244
+
+ #### MLFMA Info For Each Region ####
+ Mat-Region =            1
+ Array dimension parameters:
+ maxrule=          14   maxgrid  =          64
+ lmax   =           2   ncmax    =          65
+ lsmax  =           6   lsmin    =           6
+ kpm    =          76   kp0      =          76
+ ntlm   =       24016   nsm      =        4256
+ nkpm   =          76   niplm    =        4864
+ ngnearm=         632   ngsndm   =        2504
+ nearm  =         413   mfinestm =          43
+ ###############################
+
+ CFIE Alpha:  0.50000000000000000     
+
+ Fill MLFMA FI for Mat-Reg:           1
+ Begin filltl.f
+ fill translation matrix
+ Level:            2
+ fill shifting matrix
+ translator time(s):   2.70000007E-02
+ fill interpolation matrix
+ Filling TL                  Delta_CPU=          0.12 Memory(MB)=         65.70
+ Filling sndgrp              Delta_CPU=          0.00 Memory(MB)=         65.70
+ Filling VFS                 Delta_CPU=          0.25 Memory(MB)=         65.70
+
+ Fill MLFMA NI for Mat-Reg:           1
+ Begin fill sparser part of Nearfield
+ Begin fill denser part of Nearfield
+ End fill
+ Filling Amn                 Delta_CPU=         12.24 Memory(MB)=         65.70
+
+
+ Now testing preconditioner with
+ ipretype =            8
+ method = cfie_solve_nfpre_pardiso
+
+  
+ NBP>>Begin fill sparser part of Nearfield

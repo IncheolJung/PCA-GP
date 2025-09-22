@@ -1,0 +1,63 @@
+
+ ======  Simulation 71 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.25681131506679267 0.1186399687222321
+
+Iteration 1 / 20: acquisition 0.0332916568 | variance 0.0332916568
+number of frequency samples: 3
+sampling new frequency 9740.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.3050734804321447 0.04191755812949167
+
+Iteration 2 / 20: acquisition 0.0068285411 | variance 0.0068285411
+number of frequency samples: 4
+sampling new frequency 9950.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.34753997366036693 0.01137815593098852
+
+Iteration 3 / 20: acquisition 0.0021834793 | variance 0.0021834793
+number of frequency samples: 5
+sampling new frequency 9500.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3737130515169984 0.003969035538650992
+
+Iteration 4 / 20: acquisition 0.0004339011 | variance 0.0004339011
+number of frequency samples: 6
+sampling new frequency 10330.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.3919334035802041 0.001771641922307775
+
+Iteration 5 / 20: acquisition 0.0145194642 | variance 0.0145194642
+number of frequency samples: 7
+sampling new frequency 10050.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.4232646683973672 0.00034875901317178015
+
+Iteration 6 / 20: acquisition 0.0065172938 | variance 0.0065172938
+number of frequency samples: 8
+sampling new frequency 10340.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.44741618491977575 0.0001378447080825435
+
+Iteration 7 / 20: acquisition 0.0000022270 | variance 0.0000022270
+number of frequency samples: 9
+sampling new frequency 9840.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.47731434716353516 0.00013767636712912722
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	7	/	20
+  >> Final acquisition:	2.2269870165252328e-06
+  >> Final variance:	2.2269870165252328e-06
+  >> total n_freq:	10
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.04019731991231395

@@ -1,0 +1,69 @@
+
+ ======  Simulation 29 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2548176657470386 0.11936728348999613
+
+Iteration 1 / 20: acquisition 0.0372043984 | variance 0.0372043984
+number of frequency samples: 3
+sampling new frequency 10230.000
+number of basis updated: 2 -> 3
+S[0, r] =  0.310273300355636 0.027285304805550505
+
+Iteration 2 / 20: acquisition 0.0072981706 | variance 0.0072981706
+number of frequency samples: 4
+sampling new frequency 9790.000
+number of basis updated: 3 -> 4
+S[0, r] =  0.3395754145393731 0.01274735198175611
+
+Iteration 3 / 20: acquisition 0.0038196695 | variance 0.0038196695
+number of frequency samples: 5
+sampling new frequency 10480.000
+number of basis updated: 4 -> 5
+S[0, r] =  0.3651401454672221 0.004607667974742297
+
+Iteration 4 / 20: acquisition 0.0032012649 | variance 0.0032012649
+number of frequency samples: 6
+sampling new frequency 9620.000
+number of basis updated: 5 -> 6
+S[0, r] =  0.3885126955796216 0.002026470110778201
+
+Iteration 5 / 20: acquisition 0.0043053778 | variance 0.0043053778
+number of frequency samples: 7
+sampling new frequency 9910.000
+number of basis updated: 6 -> 7
+S[0, r] =  0.422742456422188 0.0005229672392095371
+
+Iteration 6 / 20: acquisition 0.0169412102 | variance 0.0169412102
+number of frequency samples: 8
+sampling new frequency 9750.000
+number of basis updated: 7 -> 8
+S[0, r] =  0.4579619596970825 0.00022448833606539018
+
+Iteration 7 / 20: acquisition 0.0000159165 | variance 0.0000159165
+number of frequency samples: 9
+sampling new frequency 10280.000
+number of basis updated: 8 -> 9
+S[0, r] =  0.4769783815052278 0.00012143163862898385
+
+Iteration 8 / 20: acquisition 0.0000005378 | variance 0.0000005378
+number of frequency samples: 10
+sampling new frequency 10500.000
+number of basis updated: 9 -> 10
+S[0, r] =  0.4931213538455981 0.0001155818561068748
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	8	/	20
+  >> Final acquisition:	5.377558877050445e-07
+  >> Final variance:	5.377558877050445e-07
+  >> total n_freq:	11
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.00038756008997332963

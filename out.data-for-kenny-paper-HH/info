@@ -1,0 +1,7 @@
+#	ac_fx		X_norm		n_init		tol
+1,2	max_var				3		1e-4
+3,4	EI				3		1e-4
+5,6	UCB				3		1e-4
+7-10	max_var				10		1e-6
+11-14	EI				10		1e-6
+15-18	UCB				10		1e-6

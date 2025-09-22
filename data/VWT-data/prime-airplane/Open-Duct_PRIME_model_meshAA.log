@@ -1,0 +1,564 @@
+ Last Built Begin in Sep 22 2025 09:01:48
+ Pre-Type( Input ):           10
+ Skl-Tol ( Input ):    1.0000000000000001E-005
+ Wavelength in freespace: 0.0305103
+
+ ################################################
+ ##         Generating Required Mesh          ##
+ ##         Waiting.....                      ##
+ ################################################
+ Subd No.      Subd Name
+    1    Open-Duct_PRIME_model_meshAA1                                     
+ isub,  nnode, npatch,  nedge:
+    1      6118     12236     18354
+ Scale Factor         >>   1.54999997E-02
+ ################################################
+
+ START TIME: 20250922   102338.274
+
+
+ Informaton for IE geometry:
+ number of subdomains     : 1
+ maxnode,maxpatch,maxedge : 6118  12236  18354
+ 
+ Index of Mat-Reg: 1
+ Mat-Reg Number via MatFlg: 1
+ Edge Number of Mat-Reg: 1, 18354
+
+ Number of Edge on PEC: 18354
+ Mat-Reg: No Dim(m) Lmax:
+    1 0.235    5
+ Totlmax, add1, add2:           5           6           7
+ rlengmax of Global MLFMA >>   0.23500510362304192     
+ Lmax of Global MLFMA >>            5
+ Wavenum of Mat-Reg:
+    1 1.000
+
+ total area in sq m           =      0.0510
+ total area in sq lambda      =     54.7547
+ maxnode, maxpatch, maxedge           =     6118    12236    18354
+ longest  edge in lambda              =      0.1530
+ shortest edge in lambda              =      0.0073
+ average  edge in lambda              =      0.1021
+ largest  patch area in sq lambda     =      0.0079
+ smallest patch area in sq lambda     =      0.0000
+ ave    surface area in sq lambda     =      0.0045
+ size range of the object in sq lambda =      7.5202
+
+ #### MLFMA Info For Each Region ####
+ Mat-Region =            1
+ Array dimension parameters:
+ maxrule=          14   maxgrid  =          64
+ lmax   =           5   ncmax    =        1250
+ lsmax  =          26   lsmin    =           7
+ kpm    =        1356   kp0      =         102
+ ntlm   =      212856   nsm      =      230886
+ nkpm   =        2178   niplm    =      139392
+ ngnearm=       14257   ngsndm   =       64634
+ nearm  =         333   mfinestm =         119
+ ###############################
+
+ CFIE Alpha:  0.50000000000000000     
+
+ Fill MLFMA FI for Mat-Reg:           1
+ Begin filltl.f
+ fill translation matrix
+ Level:            2
+ fill shifting matrix
+ Level:            3
+ fill shifting matrix
+ Level:            4
+ fill shifting matrix
+ Level:            5
+ fill shifting matrix
+ translator time(s):  0.124000005    
+ fill interpolation matrix
+ ThetaOrder            8
+ PhiOrder            8
+ lsl            7
+ Filling TL                  Delta_CPU=          0.55 Memory(MB)=        653.71
+ Filling sndgrp              Delta_CPU=          0.01 Memory(MB)=        653.71
+ Filling VFS                 Delta_CPU=          3.14 Memory(MB)=        653.71
+
+ Fill MLFMA NI for Mat-Reg:           1
+ Begin fill sparser part of Nearfield
+ Begin fill denser part of Nearfield
+ End fill
+ Filling Amn                 Delta_CPU=         91.78 Memory(MB)=        653.71
+
+
+ Now testing preconditioner with
+ ipretype =           10
+ method = cfie_solve_nfrasspspre_pardiso
+
+  
+ NBP>>Begin fill sparser part of Nearfield
+
+114.6722% NBP>>Begin fill denser part of Nearfield
+
+200.1041%
+ Begin MLFMA Box-Matrix Based Spar-RAS Prec Constructor
+ --- Intel MKL PARDISO --- 
+ Memory for iGroup: 1 1.41622e+09 MB
+ Total Memory For SparRAS Pre: 1.41622e+09 MB
+ --- PARDISO PRECONDITIONER INITIALIZED --- 
+ Constructing preconditioner CPU time: 4 s
+ 
+ 1101240
+ Memory for Iteration:: 16.8036 MB
+
+ Iseg, Ninc_S : 1, 181, 0
+
+ Iseg, Skeleton Angles: 1, 40
+ Iseg, Skel-Pk Mem(MB): 1, 314.35
+
+ Iseg, Irank, Idinc : 1, 1, 22
+ Thata, Phi : 90.000000, 21.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.141158e-01
+ 1  2.912284e-01
+ 2  1.660804e-01
+ 3  1.136598e-01
+ 4  7.993549e-02
+ 5  5.917674e-02
+ 6  4.516512e-02
+ 7  3.509202e-02
+ 8  2.770212e-02
+ 9  2.225975e-02
+ 10  1.730692e-02
+ 11  1.380632e-02
+ 12  1.084076e-02
+ 13  8.880553e-03
+ 14  7.272562e-03
+ 15  6.135792e-03
+ 16  5.116286e-03
+ 17  4.303908e-03
+ 18  3.612190e-03
+ 19  3.069087e-03
+ 20  2.672759e-03
+ 21  2.311182e-03
+ 22  2.065037e-03
+ 23  1.877925e-03
+ 24  1.752600e-03
+ 25  1.628700e-03
+ 26  1.515630e-03
+ 27  1.416471e-03
+ 28  1.327757e-03
+ 29  1.239434e-03
+ 30  1.140395e-03
+ 31  1.034789e-03
+ 32  9.250318e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000925032
+
+ Iseg, Irank, Idinc : 1, 2, 42
+ Thata, Phi : 90.000000, 41.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.265516e-01
+ 1  3.155148e-01
+ 2  2.000397e-01
+ 3  1.299532e-01
+ 4  8.908629e-02
+ 5  6.505554e-02
+ 6  4.800666e-02
+ 7  3.657295e-02
+ 8  2.804441e-02
+ 9  2.132672e-02
+ 10  1.634122e-02
+ 11  1.285687e-02
+ 12  1.043990e-02
+ 13  8.561853e-03
+ 14  7.052625e-03
+ 15  5.861961e-03
+ 16  5.008079e-03
+ 17  4.369947e-03
+ 18  3.932417e-03
+ 19  3.570860e-03
+ 20  3.281795e-03
+ 21  3.055880e-03
+ 22  2.839920e-03
+ 23  2.604383e-03
+ 24  2.419636e-03
+ 25  2.215890e-03
+ 26  1.992654e-03
+ 27  1.731495e-03
+ 28  1.510456e-03
+ 29  1.261363e-03
+ 30  1.037253e-03
+ 31  8.351848e-04
+ Iteration CPU time: 7 s
+ CFIE residual: 0.000835185
+
+ Iseg, Irank, Idinc : 1, 3, 109
+ Thata, Phi : 90.000000, 108.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.288560e-01
+ 1  3.553238e-01
+ 2  2.228974e-01
+ 3  1.533907e-01
+ 4  1.074700e-01
+ 5  8.092377e-02
+ 6  6.240721e-02
+ 7  4.788032e-02
+ 8  3.796651e-02
+ 9  3.085780e-02
+ 10  2.389898e-02
+ 11  1.874113e-02
+ 12  1.531974e-02
+ 13  1.265886e-02
+ 14  1.032694e-02
+ 15  8.491169e-03
+ 16  7.110961e-03
+ 17  6.034612e-03
+ 18  5.212000e-03
+ 19  4.534850e-03
+ 20  4.023302e-03
+ 21  3.594228e-03
+ 22  3.259935e-03
+ 23  2.989557e-03
+ 24  2.785693e-03
+ 25  2.578813e-03
+ 26  2.386638e-03
+ 27  2.185615e-03
+ 28  1.948859e-03
+ 29  1.707289e-03
+ 30  1.461085e-03
+ 31  1.202090e-03
+ 32  9.495906e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000949591
+
+ Iseg, Irank, Idinc : 1, 4, 64
+ Thata, Phi : 90.000000, 63.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.634394e-01
+ 1  3.579573e-01
+ 2  2.230341e-01
+ 3  1.437668e-01
+ 4  1.033513e-01
+ 5  7.874003e-02
+ 6  5.997594e-02
+ 7  4.630138e-02
+ 8  3.723255e-02
+ 9  2.989938e-02
+ 10  2.340126e-02
+ 11  1.862614e-02
+ 12  1.459345e-02
+ 13  1.194987e-02
+ 14  1.006633e-02
+ 15  8.540829e-03
+ 16  7.670816e-03
+ 17  6.981955e-03
+ 18  6.347794e-03
+ 19  5.813886e-03
+ 20  5.360752e-03
+ 21  4.924855e-03
+ 22  4.582474e-03
+ 23  4.262126e-03
+ 24  3.874751e-03
+ 25  3.418372e-03
+ 26  2.998581e-03
+ 27  2.519404e-03
+ 28  2.085235e-03
+ 29  1.688872e-03
+ 30  1.313220e-03
+ 31  1.022379e-03
+ 32  8.044065e-04
+ Iteration CPU time: 7 s
+ CFIE residual: 0.000804406
+
+ Iseg, Irank, Idinc : 1, 5, 147
+ Thata, Phi : 90.000000, 146.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.512273e-01
+ 1  3.443402e-01
+ 2  2.080427e-01
+ 3  1.430604e-01
+ 4  1.038789e-01
+ 5  7.939664e-02
+ 6  6.264071e-02
+ 7  4.909573e-02
+ 8  4.107942e-02
+ 9  3.454617e-02
+ 10  2.920329e-02
+ 11  2.463701e-02
+ 12  2.021990e-02
+ 13  1.610795e-02
+ 14  1.304403e-02
+ 15  1.050562e-02
+ 16  8.453153e-03
+ 17  7.081158e-03
+ 18  5.809630e-03
+ 19  4.786269e-03
+ 20  3.958349e-03
+ 21  3.302076e-03
+ 22  2.850539e-03
+ 23  2.500709e-03
+ 24  2.236569e-03
+ 25  2.044746e-03
+ 26  1.896772e-03
+ 27  1.767145e-03
+ 28  1.641393e-03
+ 29  1.514632e-03
+ 30  1.376100e-03
+ 31  1.215024e-03
+ 32  1.035541e-03
+ 33  8.518694e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000851869
+
+ Iseg, Irank, Idinc : 1, 6, 74
+ Thata, Phi : 90.000000, 73.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.407303e-01
+ 1  3.661271e-01
+ 2  2.379884e-01
+ 3  1.497271e-01
+ 4  1.046940e-01
+ 5  7.960506e-02
+ 6  6.248417e-02
+ 7  4.893199e-02
+ 8  3.925181e-02
+ 9  3.226139e-02
+ 10  2.513644e-02
+ 11  2.004371e-02
+ 12  1.632815e-02
+ 13  1.374699e-02
+ 14  1.173506e-02
+ 15  1.004831e-02
+ 16  8.787614e-03
+ 17  7.914109e-03
+ 18  7.178558e-03
+ 19  6.563068e-03
+ 20  6.028393e-03
+ 21  5.585320e-03
+ 22  5.184636e-03
+ 23  4.825901e-03
+ 24  4.440204e-03
+ 25  4.049305e-03
+ 26  3.579556e-03
+ 27  3.090426e-03
+ 28  2.621434e-03
+ 29  2.224893e-03
+ 30  1.801401e-03
+ 31  1.436439e-03
+ 32  1.116357e-03
+ 33  8.577449e-04
+ Iteration CPU time: 7 s
+ CFIE residual: 0.000857745
+
+ Iseg, Irank, Idinc : 1, 7, 85
+ Thata, Phi : 90.000000, 84.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.180557e-01
+ 1  3.517096e-01
+ 2  2.276018e-01
+ 3  1.545187e-01
+ 4  1.111923e-01
+ 5  8.615818e-02
+ 6  6.637553e-02
+ 7  5.261365e-02
+ 8  4.202238e-02
+ 9  3.470340e-02
+ 10  2.714147e-02
+ 11  2.071432e-02
+ 12  1.637989e-02
+ 13  1.350233e-02
+ 14  1.131666e-02
+ 15  9.665120e-03
+ 16  8.371443e-03
+ 17  7.368040e-03
+ 18  6.618788e-03
+ 19  6.038928e-03
+ 20  5.598003e-03
+ 21  5.224860e-03
+ 22  4.864793e-03
+ 23  4.524440e-03
+ 24  4.139047e-03
+ 25  3.740061e-03
+ 26  3.372332e-03
+ 27  2.979185e-03
+ 28  2.569305e-03
+ 29  2.147791e-03
+ 30  1.798937e-03
+ 31  1.472512e-03
+ 32  1.195192e-03
+ 33  9.437959e-04
+ Iteration CPU time: 7 s
+ CFIE residual: 0.000943796
+
+ Iseg, Irank, Idinc : 1, 8, 159
+ Thata, Phi : 90.000000, 158.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.105684e-01
+ 1  3.129517e-01
+ 2  1.909265e-01
+ 3  1.302710e-01
+ 4  9.947395e-02
+ 5  7.923242e-02
+ 6  6.381670e-02
+ 7  5.105595e-02
+ 8  4.369473e-02
+ 9  3.762751e-02
+ 10  3.149741e-02
+ 11  2.599792e-02
+ 12  2.139271e-02
+ 13  1.746304e-02
+ 14  1.413004e-02
+ 15  1.155976e-02
+ 16  9.448644e-03
+ 17  7.760308e-03
+ 18  6.232314e-03
+ 19  5.224018e-03
+ 20  4.186588e-03
+ 21  3.512768e-03
+ 22  2.988400e-03
+ 23  2.600502e-03
+ 24  2.271871e-03
+ 25  1.988923e-03
+ 26  1.794233e-03
+ 27  1.649932e-03
+ 28  1.532497e-03
+ 29  1.436450e-03
+ 30  1.355476e-03
+ 31  1.267297e-03
+ 32  1.157129e-03
+ 33  1.023904e-03
+ 34  8.736451e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000873645
+
+ Iseg, Irank, Idinc : 1, 9, 134
+ Thata, Phi : 90.000000, 133.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.942276e-01
+ 1  3.588740e-01
+ 2  2.272241e-01
+ 3  1.541785e-01
+ 4  1.105987e-01
+ 5  8.416772e-02
+ 6  6.418385e-02
+ 7  4.984860e-02
+ 8  3.999522e-02
+ 9  3.117725e-02
+ 10  2.485945e-02
+ 11  2.026776e-02
+ 12  1.621881e-02
+ 13  1.303814e-02
+ 14  1.069399e-02
+ 15  8.743659e-03
+ 16  7.211304e-03
+ 17  5.994317e-03
+ 18  5.015361e-03
+ 19  4.378198e-03
+ 20  3.842143e-03
+ 21  3.460009e-03
+ 22  3.164690e-03
+ 23  2.876887e-03
+ 24  2.685934e-03
+ 25  2.510389e-03
+ 26  2.330199e-03
+ 27  2.160768e-03
+ 28  1.995921e-03
+ 29  1.829768e-03
+ 30  1.622211e-03
+ 31  1.405289e-03
+ 32  1.182855e-03
+ 33  9.815447e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000981545
+
+ Iseg, Irank, Idinc : 1, 10, 123
+ Thata, Phi : 90.000000, 122.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.530249e-01
+ 1  3.432126e-01
+ 2  2.254686e-01
+ 3  1.567159e-01
+ 4  1.113911e-01
+ 5  8.379199e-02
+ 6  6.456253e-02
+ 7  5.044803e-02
+ 8  3.880979e-02
+ 9  2.981826e-02
+ 10  2.389085e-02
+ 11  1.906859e-02
+ 12  1.526782e-02
+ 13  1.237701e-02
+ 14  1.010555e-02
+ 15  8.701321e-03
+ 16  7.342840e-03
+ 17  6.272447e-03
+ 18  5.445320e-03
+ 19  4.755493e-03
+ 20  4.242679e-03
+ 21  3.811446e-03
+ 22  3.470803e-03
+ 23  3.160309e-03
+ 24  2.921383e-03
+ 25  2.715820e-03
+ 26  2.515275e-03
+ 27  2.344366e-03
+ 28  2.179177e-03
+ 29  1.994056e-03
+ 30  1.793675e-03
+ 31  1.566501e-03
+ 32  1.323187e-03
+ 33  1.077223e-03
+ 34  8.846940e-04
+ Iteration CPU time: 8 s
+ CFIE residual: 0.000884694
+
+ Iseg, Irank, Idinc : 1, 11, 53
+ Thata, Phi : 90.000000, 52.000000
+ Maximun iteration: 300
+ Number of recycle truncation: 30
+ Final matrix dimension:  36708
+ Residual error:0.001000
+ 0  6.488136e-01
+ 1  3.377743e-01
+ 2  2.084005e-01
+ 3  1.348081e-01
+ 4  9.653547e-02
+ 5  7.147386e-02
+ 6  5.462516e-02
+ 7  4.268974e-02
+ 8  3.287729e-02
+ 9  2.458705e-02
+ 10  1.937084e-02
+ 11  1.519116e-02
+ 12  1.218494e-02
+ 13  1.000269e-02
+ 14  8.407506e-03
+ 15  7.260998e-03
+ 16  6.400063e-03

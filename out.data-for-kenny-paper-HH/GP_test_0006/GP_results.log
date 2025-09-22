@@ -1,0 +1,51 @@
+
+ ======  Simulation 6 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: upper confidence bound
+  >> X normalization strategy: pass
+
+number of basis updated: 3 -> 2
+S[0, r-1] =  0.2621232536598971 0.17387852469785706
+
+Iteration 0 / 20: criterion 2.5877664298 | variance 0.0090316426
+number of frequency samples: 3
+sampling new frequency 10.500
+number of basis updated: 2 -> 3
+S[0, r-1] =  0.2908050511896774 0.12621284348543155
+
+Iteration 1 / 20: criterion 2.4666682566 | variance 0.0099426179
+number of frequency samples: 4
+sampling new frequency 10.070
+number of basis updated: 3 -> 4
+S[0, r-1] =  0.3298886875407046 0.098336149051047
+
+Iteration 2 / 20: criterion 1.9754403422 | variance 0.0057856811
+number of frequency samples: 5
+sampling new frequency 9.690
+number of basis updated: 4 -> 5
+S[0, r-1] =  0.3645973711181574 0.03159045817479856
+
+Iteration 3 / 20: criterion 1.7377639596 | variance 0.0037215494
+number of frequency samples: 6
+sampling new frequency 9.770
+number of basis updated: 5 -> 6
+S[0, r-1] =  0.40764230161361653 0.007508487706409458
+
+Iteration 4 / 20: criterion 0.6629934103 | variance 0.0000502969
+number of frequency samples: 7
+sampling new frequency 9.800
+number of basis updated: 6 -> 7
+S[0, r-1] =  0.44970188820646073 0.0006043798693094637
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	4	/	20
+  >> Final criterion:	0.6629934102635539
+  >> Final variance:	5.029687714359201e-05
+  >> total n_freq:	8
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE: 0.0038739054273844707

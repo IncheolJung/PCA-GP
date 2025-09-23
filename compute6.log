@@ -1,0 +1,70 @@
+<class 'str'>
+Data loaded from data/data-for-kenny-paper-HH.npz
+x.shape: (18281, 2)
+x.range: [([9500.    0.]), ([10500.   180.])]
+y.shape: (18281,)
+y.range: [((-0.03082517+0.003975031j)), ((0.04148419+0.003385245j))]
+
+ ======  Simulation 15 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> n_init: 3
+  >> terms: 5
+  >> max_iter: 20
+  >> tol: 1e-05
+
+ ======  Simulation 15 Initialized  ====== 
+
+number of basis updated: 3 -> 2
+S[0, r] =  0.2923550040533312 0.05467671980065431
+
+  >> Initial Frequencies: ['9817.591', '9950.357', '10300.07']
+
+
+Iteration 1 / 20: acquisition 0.0246327443 | variance 0.0246327443
+number of frequency samples: 3
+sampling new frequency 10498.181
+number of basis updated: 2 -> 3
+S[0, r] =  0.31409847746098324 0.03772029342603603
+  ascent direction in projection gd =    6.7236403710109645E-005
+
+Iteration 2 / 20: acquisition 0.0077759906 | variance 0.0077759906
+number of frequency samples: 4
+sampling new frequency 9506.777
+number of basis updated: 3 -> 4
+S[0, r] =  0.32950960689543285 0.024773144932338943
+  ascent direction in projection gd =    1.1465999977009291E-007
+  ascent direction in projection gd =    1.6779647522742154E-010
+
+Iteration 3 / 20: acquisition 0.0050331807 | variance 0.0050331807
+number of frequency samples: 5
+sampling new frequency 10056.397
+number of basis updated: 4 -> 5
+S[0, r] =  0.3701911620144682 0.003695580338449069
+
+Iteration 4 / 20: acquisition 0.0017001348 | variance 0.0017001348
+number of frequency samples: 6
+sampling new frequency 9661.238
+number of basis updated: 5 -> 6
+S[0, r] =  0.3998289647763208 0.0009489932437357536
+  ascent direction in projection gd =    3.7797649577446524E-005
+  ascent direction in projection gd =    0.0000000000000000     
+
+Iteration 5 / 20: acquisition 0.0007265100 | variance 0.0007265100
+number of frequency samples: 7
+sampling new frequency 9740.043
+number of basis updated: 6 -> 7
+S[0, r] =  0.4389397377256412 0.00033620620194430153
+  ascent direction in projection gd =    5.8876692921139992E-011
+  ascent direction in projection gd =    5.3645249378376895E-006
+  ascent direction in projection gd =    0.0000000000000000     
+  ascent direction in projection gd =    0.0000000000000000     
+
+Iteration 6 / 20: acquisition 0.0000194424 | variance 0.0000194424
+number of frequency samples: 8
+sampling new frequency 10430.532
+number of basis updated: 7 -> 8
+S[0, r] =  0.45218657030522336 0.00029469701834932164
+  ascent direction in projection gd =    7.4740668442708580E-008

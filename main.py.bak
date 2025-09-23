@@ -6,14 +6,54 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
 from sklearn.pipeline import Pipeline
 from numpy.linalg import svd
 
+from joblib import Parallel, delayed
+# import threading
+
 from datareader import *
 from acquisitionfunctions import *
 
-from gp_sklearn import train_gp_sklearn
-train_gp = train_gp_sklearn
+# -----------------------
+# Mock solver placeholder
+# Replace with your expensive simulator
+# -----------------------
+# def solver(frequencies, angles):
+#     """
+#     frequencies: list/array of frequencies to evaluate
+#     angles: array of incident angles (fixed set)
+#     Returns: array of shape (len(frequencies), len(angles)), complex
+#     """
+#     # Example: resonant Lorentz-like response depending on f and θ
+#     f = np.array(frequencies)[:, None]
+#     th = np.array(angles)[None, :]
+#     resp = 1.0 / (1.0 - (f/5.0)**2 + 0.1j) * np.cos(th)
+#     return resp
 
-# from gp_Kenny import train_model_gp_Kenny
-# train_gp = train_model_gp_Kenny
+# def train_gp(
+#     X, Y, terms: int = 1, 
+#     training_iter=1000, verbose=False, normalize_y=True
+# ):
+#     from sklearn.gaussian_process import GaussianProcessRegressor as GPR
+#     from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+#     from sklearn.gaussian_process.kernels import ExpSineSquared
+#     kernel = None
+#     for i in range(terms):
+#         kernel_constant = C(1.0, (1e-10, 1e3))
+#         kernel_rbf = RBF(1.0, (1e-10, 1e3))
+#         kernel_periodic = ExpSineSquared(1.0, 1.0, (1e-10, 1e4), (1e-10, 1e4))
+#         if i==0: kernel  = kernel_constant * kernel_rbf * kernel_periodic
+#         else:    kernel += kernel_constant * kernel_rbf * kernel_periodic
+#     gp_r = GPR(kernel=kernel, alpha=1e-8, normalize_y=normalize_y, n_restarts_optimizer=10)
+#     gp_i = GPR(kernel=kernel, alpha=1e-8, normalize_y=normalize_y, n_restarts_optimizer=10)
+#     gp_r.fit(X, Y.real)
+#     gp_i.fit(X, Y.imag)
+#     # with warnings.catch_warnings():
+#     #     warnings.simplefilter("ignore")
+#     #     gp_r.fit(X, Y.real)
+#     #     gp_i.fit(X, Y.imag)
+#     return gp_r, gp_i
+
+from gp_Kenny import train_model_gp_Kenny
+train_gp = train_model_gp_Kenny
 
 # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode
 # train_gp = train_model_gp_Kenny_from_mode
@@ -49,20 +89,14 @@ class Tee(object):
 # Pipeline 2 implementation
 # -----------------------
 class ReducedBasisGP:
-    def __init__(
-            self, solver, angles, n_init=6, r=3, adaptive_r=True, 
-            acquisition_type=0, Xnormalizer_type=0, terms=1
-            ) -> None:
+    def __init__(self, solver, angles, n_init=6, r=3, adaptive_r=True, acquisition_type=0, Xnormalizer_type=0, terms=1):
         self.solver = solver
         self.angles = angles
         self.n_init = n_init
         self.r = r
         self.adaptive_r = adaptive_r
         self.acquisition_type = acquisition_type
-        self.acquisition_function = None
         self.Xnormalizer_type = Xnormalizer_type
-        self.normalizerX = None
-        self.sampler = None
         self.terms = terms
         self.freqs = []
         self.responses = []
@@ -75,18 +109,10 @@ class ReducedBasisGP:
         self.fbest = None
         return None
         
-    def initialize(self, f_min, f_max, sampling_strategy=1):
+    def initialize(self, f_min, f_max):
 
-        if sampling_strategy == 0:
-            self.sampler = lambda f_min, f_max, n_grid: np.linspace(f_min, f_max, n_grid)[:, None]
-        elif sampling_strategy == 1:
-            self.sampler = lambda f_min, f_max, n_grid: self.latin_hypercube_sampling(f_min, f_max, n_grid)[:, None]
-            # grid = self.normalizerX.transform(lhc_samples)
-        else:
-            print(f"sampling_strategy {sampling_strategy} not supported!")
-            print(f"falling back to sampling_strategy 0 (grid sampling)")
-            return self.initialize(f_min, f_max, 0)
-        
+        # log- or lin-spaced initial design
+        # f_init = np.linspace(f_min, f_max, self.n_init)
         f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
         self.freqs = list(f_init)
         # Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
@@ -158,7 +184,58 @@ class ReducedBasisGP:
         self.coeffs = self.U * self.S  # shape (n_freqs, r)
         return 0
         
+    # def _init_gps(self):
+    #     self.gps_real, self.gps_imag = [], []
+    #     for i in range(self.r):
+    #         # Separate real and imaginary parts
+    #         kernel_constant = C(1.0, (1e-3, 1e3))
+    #         kernel_rbf = RBF(1.0, (1e-10, 1e3))
+    #         kernel_periodic = ExpSineSquared(1.0, 1.0, (1e-4, 1e4), (1e-4, 1e4))
+    #         kernel = kernel_constant * kernel_rbf * kernel_periodic
+    #         gp_r = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, normalize_y=True, n_restarts_optimizer=10)
+    #         gp_i = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, normalize_y=True, n_restarts_optimizer=10)
+    #         self.gps_real.append(gp_r)
+    #         self.gps_imag.append(gp_i)
+    #     return 0
+        
+    # def _fit_gps(self):
+    #     X = self.normalizerX.transform(np.array(self.freqs)[:, None])
+    #     for i in range(self.r):
+    #         y = self.coeffs[:, i]
+    #         self.gps_real[i].fit(X, y.real)
+    #         self.gps_imag[i].fit(X, y.imag)
+    #     return 0
+        
     def _fit_gps(self):
+        # # self.gps_real = [None] * self.r
+        # # self.gps_imag = [None] * self.r
+        # def _train_one(i, x_train, coeffs, r):
+        #     y_train = coeffs[:, i][:, None]
+        #     gp_r, gp_i = train_gp(
+        #         x_train, y_train, terms=self.terms, 
+        #         training_iter=1000, verbose=True
+        #         )
+        #     return gp_r, gp_i
+        #     # self.gps_real[i] = gp_r
+        #     # self.gps_imag[i] = gp_i
+        #     # return None
+        
+        # x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
+
+        # # Parallel training
+        # results = Parallel(n_jobs=-1)(  # use all cores
+        #     delayed(_train_one)(i, x_train, self.coeffs, self.r)
+        #     for i in range(self.r)
+        # )
+
+        # # Unpack results
+        # self.gps_real, self.gps_imag = zip(*results)
+        # # Convert back to lists if needed
+        # self.gps_real, self.gps_imag = list(self.gps_real), list(self.gps_imag)
+
+        # threads = [threading.Thread(target=_train_one, args=(i,x_train,)) for i in range(self.r)]
+        # for t in threads: t.start()
+        # for t in threads: t.join()
         
         self.gps_real = []
         self.gps_imag = []
@@ -175,26 +252,50 @@ class ReducedBasisGP:
             self.gps_imag.append(gp_i)
 
         return 0
-    
-    def _pred_gps(self, f_min, f_max, n_grid):
-        x_pred = self.sampler(f_min, f_max, n_grid)
-        x_pred = self.normalizerX.transform(x_pred)
+            
+    def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
+        """Pick frequency that maximizes integrated variance across coefficients"""
+        # # mu_list = [None] * self.r
+        # # var_list = [None] * self.r
+        # def _predict_one(i, gps_real, gps_imag, S, grid):
+        #     mu_r, std_r = gps_real[i].predict(grid, return_std=True)
+        #     mu_i, std_i = gps_imag[i].predict(grid, return_std=True)
+        #     weight = S[i]**2
+        #     return weight * (mu_r**2 + mu_i**2), weight * (std_r**2 + std_i**2)
+        #     # mu_list[i]  = weight * (mu_r**2 + mu_i**2)
+        #     # var_list[i] = weight * (std_r**2 + std_i**2)
+        #     # return None
+        
+        # grid = self.normalizerX.transform(np.linspace(f_min, f_max, n_grid)[:, None])
+        # # freq_lhs = self.latin_hypercube_sampling(f_min, f_max, n_grid)
+        # # grid = self.normalizerX.transform(freq_lhs[:, None])
+
+        # results = Parallel(n_jobs=-1)(  # -1 = all cores
+        #     delayed(_predict_one)(i, self.gps_real, self.gps_imag, self.S, grid)
+        #     for i in range(self.r)
+        # )
+
+        # total_mu, total_var = np.sum(np.array(results), axis=0)
+
+        # # threads = [threading.Thread(target=_predict_one, args=(i, self.gps_real, self.gps_imag, self.S, grid)) for i in range(self.r)]
+        # # for t in threads: t.start()
+        # # for t in threads: t.join()
+
+        # # total_mu = np.sum(mu_list, axis=0)
+        # # total_var = np.sum(var_list, axis=0)
+
+        grid = self.normalizerX.transform(np.linspace(f_min, f_max, n_grid)[:, None])
         total_mu, total_var = np.zeros(n_grid), np.zeros(n_grid)
         # preds = []
         for i in range(self.r):
-            mu_r, std_r = self.gps_real[i].predict(x_pred, return_std=True)
-            mu_i, std_i = self.gps_imag[i].predict(x_pred, return_std=True)
+            mu_r, std_r = self.gps_real[i].predict(grid, return_std=True)
+            mu_i, std_i = self.gps_imag[i].predict(grid, return_std=True)
             # weight variance by singular value (importance of mode)
             weight = self.S[i]**2
             total_mu += weight * (mu_r**2 + mu_i**2)
             total_var += weight * (std_r**2 + std_i**2)
             # preds.append(weight * (mu_r**2 + mu_i**2))
-        return total_mu, total_var, x_pred
-            
-    def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
-        """Pick frequency that maximizes integrated variance across coefficients"""
 
-        total_mu, total_var, f_domain = self._pred_gps(f_min, f_max, n_grid)
         # print(np.array(preds))
         
         responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
@@ -203,14 +304,14 @@ class ReducedBasisGP:
 
         ac_vals = self.acquisition_function(total_mu, total_var)
         idx = np.argmax(ac_vals)
-        f_domain = self.normalizerX.inverse_transform(f_domain)
+        grid = self.normalizerX.inverse_transform(grid)
         for new_idx in np.flip(np.argsort(ac_vals)):
-            if f_domain[new_idx, 0] not in self.freqs:
+            if grid[new_idx, 0] not in self.freqs:
                 idx = new_idx
                 break
         denom = self.r/len(self.freqs)
 
-        return f_domain[idx, 0], np.sum(ac_vals)/denom, np.sum(total_var)/denom
+        return grid[idx, 0], np.sum(ac_vals)/denom, np.sum(total_var)/denom
     
     def update(self, f_new):
         y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
@@ -245,15 +346,12 @@ def configuration():
         "pass", "z-score", "min-max", "power transform", 
         "standardized power transform", "scaled z-score"
         ]
-    sampling_types = [
-        "grid", "latin-hyper-cube"
-        ]
     parser = ArgumentParser()
     parser.add_argument(
         "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", default="0", 
         help=f"type of acquisition function [{ac_fx_types}]")
     parser.add_argument(
-        "-x", "--xn", "--X-normalizer", dest="xn", default="2", 
+        "-x", "--xn", "--X-normalizer", dest="xn", default="0", 
         help=f"type of X-normalizer [{xnorm_types}]")
     parser.add_argument(
         "-n", "--n-init", dest="n", default="3", 
@@ -261,9 +359,6 @@ def configuration():
     parser.add_argument(
         "-t", "--terms", dest="t", default="3", 
         help=f"number of terms [stacked-RBFP and LF-NSM]")
-    parser.add_argument(
-        "-s", "--sample", "--sampling-strategy", dest="s", default="0", 
-        help=f"type of sampling strategy [{sampling_types}]")
     parser.add_argument(
         "-i", "--max-iter", dest="i", default="20", 
         help=f"maximum iteration. maximum samples = n_init + max_iter")
@@ -288,10 +383,6 @@ def main():
         "pass", "z-score", "min-max", "power transform", 
         "standardized power transform", "scaled z-score"
     ]
-    sampling_type = int(config.s)
-    sampling_type_candidate = [
-        "grid", "latin-hyper-cube"
-        ]
     n_init = int(config.n)
     terms  = int(config.t)
     max_iter = int(config.i)
@@ -300,7 +391,7 @@ def main():
     # SOLVER
     # -----------------------
 
-    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
     # solver = OnFlySolver(
@@ -309,11 +400,11 @@ def main():
     #     angles=np.linspace(0, 180, 181)
     #     )
 
-    solver = OnFlySolver(
-        workingpath="./data/VWT-data/prime-airplane",
-        model_name="Open-Duct_PRIME_model_meshAA",
-        angles=np.linspace(0, 180, 181)
-        )
+    # solver = OnFlySolver(
+    #     workingpath="./data/VWT-data/prime-airplane",
+    #     model_name="Open-Duct_PRIME_model_meshAA",
+    #     angles=np.linspace(0, 180, 181)
+    #     )
     # -----------------------
     # OUTPUT DRIECTORY SETUP
     # -----------------------
@@ -326,7 +417,6 @@ def main():
     print(f"  >> Adaptive basis: {adaptive_basis}")
     print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
     print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")
-    print(f"  >> Sampling strategy: {sampling_type_candidate[sampling_type]}")
     print(f"  >> n_init: {n_init}")
     print(f"  >> terms: {terms}")
     print(f"  >> max_iter: {max_iter}")
@@ -342,13 +432,9 @@ def main():
     f_test = np.linspace(f_min, f_max, f_num)
     angles = np.linspace(0, 180, 181)  # 181 angles
     # angles = np.linspace(0, 180, 19)
-    rbgp = ReducedBasisGP(solver, angles, n_init=n_init, r=n_init, 
-                          adaptive_r=adaptive_basis, 
-                          acquisition_type=acquisition_function, 
-                          Xnormalizer_type=Xnormalizer_type, 
-                          terms=terms, 
-                          )
-    rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=0)
+    rbgp = ReducedBasisGP(solver, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
+                          acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, terms=terms)
+    rbgp.initialize(f_min=f_min, f_max=f_max)
     make_pretty_number = lambda freq: str(round(freq, 3))
     pretty_number = list(map(make_pretty_number,rbgp.freqs))
     print(f"\n  >> Initial Frequencies: {pretty_number}\n")
@@ -402,20 +488,15 @@ def main():
     hf, hx = subplots(nrows=nrows, ncols=ncols, figsize=(16,8), constrained_layout=True)
     extent = [rbgp.angles.min(), rbgp.angles.max(), f_test.min(), f_test.max()]
     im = np.empty((nrows,ncols), dtype="object")
-    eps = 1e-12  # small number to avoid log(0)
-    numer_real = np.square(np.abs(pred.real - truth.real)) + eps
-    denom_real = np.square(np.abs(truth.real)) + eps
-    numer_imag = np.square(np.abs(pred.imag - truth.imag)) + eps
-    denom_imag = np.square(np.abs(truth.imag)) + eps
-    error_real = 10 * np.log10(numer_real / denom_real)
-    error_imag = 10 * np.log10(numer_imag / denom_imag)
+    error_real = 10 * np.log10(np.square(np.abs(pred.real - truth.real)) / np.square(np.abs(truth.real)))
+    error_imag = 10 * np.log10(np.square(np.abs(pred.imag - truth.imag)) / np.square(np.abs(truth.imag)))
     error = error_real + 1j*error_imag
     im[0,0] = hx[0,0].imshow(pred.real,  cmap="turbo", aspect="auto", extent=extent)
     im[0,1] = hx[0,1].imshow(truth.real, cmap="turbo", aspect="auto", extent=extent)
     im[1,0] = hx[1,0].imshow(pred.imag,  cmap="turbo", aspect="auto", extent=extent)
     im[1,1] = hx[1,1].imshow(truth.imag, cmap="turbo", aspect="auto", extent=extent)
-    im[0,2] = hx[0,2].imshow(error.real,  cmap="hot", aspect="auto", extent=extent)
-    im[1,2] = hx[1,2].imshow(error.imag, cmap="hot", aspect="auto", extent=extent)
+    im[0,2] = hx[0,2].imshow(error.real,  cmap="turbo", aspect="auto", extent=extent)
+    im[1,2] = hx[1,2].imshow(error.imag, cmap="turbo", aspect="auto", extent=extent)
     hx[0,0].set_title("PRED RE")
     hx[0,1].set_title("TRUTH RE")
     hx[1,0].set_title("PRED IM")

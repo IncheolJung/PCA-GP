@@ -158,10 +158,34 @@ class Domain:
         return self.expand_indices(axes, indices)
 
     def normalize(self, x: Union[Array, Tensor]) -> Union[Array, Tensor]:
-        return (x - self.raveled[0])/(self.raveled[-1] - self.raveled[0])
+        start = self.raveled[0]
+        end   = self.raveled[-1]
+        denom = end - start
+
+        if isinstance(x, np.ndarray):
+            # Handle numpy
+            numer = x - start
+            with np.errstate(divide="ignore", invalid="ignore"):
+                out = np.true_divide(numer, denom, where=denom != 0)
+                out = np.where(denom == 0, numer, out)
+            return out
+
+        elif isinstance(x, torch.Tensor):
+            # Handle torch
+            denom = torch.from_numpy(denom)
+            numer = x - torch.from_numpy(start)
+            denom_iszero = denom == 0
+            out = torch.empty_like(numer)
+            out = torch.where(denom_iszero, numer, numer / denom)
+            return out
+
+        else:
+            raise TypeError(f"Unsupported type {type(x)}")
+        # return (x - self.raveled[0]) / (self.raveled[-1] - self.raveled[0])
 
     def unnormalize(self, x: Union[Array, Tensor]) -> Union[Array, Tensor]:
-        return x * (self.raveled[-1] - self.raveled[0]) + self.raveled[0]
+        denom = self.raveled[-1] - self.raveled[0]
+        return x * denom + self.raveled[0]
 
     def chunk(self, shape: Tuple[int]) -> Array[Domain]:
         iterables = [range(x) for x in shape]

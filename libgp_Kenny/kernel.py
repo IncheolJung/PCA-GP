@@ -136,6 +136,8 @@ class NSMKernel:
     @staticmethod
     def forward(self, x1: Tensor, x2: Tensor, diag: bool = False, **params) -> Tensor:
         """Forward function for the generic NSM class of kernels."""
+        # print("Input shapes from kernel.NSMKernel.forward")
+        # print(x1.shape, x2.shape, x1.dtype, x2.dtype, diag)
         if diag:
             x_ = x1 / self.lengthscale
             std = self.std_func.forward(x_, self)
@@ -237,11 +239,13 @@ class LocalFourier(KFunction):
         self.ard_num_dims = ard_num_dims
         self.freqs = freqs + 1
         self.normalize = self.freqs**self.ard_num_dims
+        # print("report from LocalFourier.__init__")
+        # print(self.ard_num_dims, self.freqs, self.normalize)
 
     def parameters(self):
         return {
-            "amps": ((2, self.freqs**self.ard_num_dims - 1,), Positive()),
-            "phases": ((2, self.freqs**self.ard_num_dims - 1,), Interval(-1.5*torch.pi, 1.5*torch.pi)),
+            "amps": ((2, self.normalize - 1,), Positive()),
+            "phases": ((2, self.normalize - 1,), Interval(-1.5*torch.pi, 1.5*torch.pi)),
             "period": ((1,), Positive()),
             "scale": ((1,), Positive())
         }
@@ -254,6 +258,9 @@ class LocalFourier(KFunction):
         freqs = torch.cartesian_prod(*dims)[1:].view(-1, x.shape[-1]).transpose(-1, -2) # Skip zero.
         # normalize = self.freqs**self.ard_num_dims
         normalize = self.normalize
+        # print("shape from LocalFourier.forward:")
+        # print(x.shape, freqs.shape, period.shape, phases.shape)
+        # print(dims, freqs)
         sin = torch.sin(torch.pi * torch.matmul(x, freqs)/period + phases[0])/normalize
         cos = torch.cos(torch.pi * torch.matmul(x, freqs)/period + phases[1])/normalize
         summed = torch.matmul(sin, amps[0]) + torch.matmul(cos, amps[1])
@@ -325,7 +332,38 @@ class MultipliedKernels(Kernel):
         #     lambda x1, x2: self.covar_dist(x1, x2, square_dist=True, diag=False, **params),
         # )
 
-def get_kernel(sett) -> _Kernel:
+class StackedKernel(Kernel):
+
+    has_lengthscale = True
+    lengthscale_ = 1.0
+
+    def __init__(self, kern_sett: KernelSettings, *args, **kwargs) -> None:
+        name, nu, dims, terms = kern_sett
+        super(StackedKernel, self).__init__(*args, active_dims=dims, **kwargs)
+        kern_sett = name.replace("Stacked_",""), nu, dims, 1
+        self.kernels = torch.nn.ModuleList([get_kernel(kern_sett) for _ in range(terms)])
+        return None
+    
+    @property
+    def lengthscale(self):
+        return self.lengthscale_
+    
+    @lengthscale.setter
+    def lengthscale(self, value):
+        # propagate to sub-kernels
+        for k in self.kernels:
+            if hasattr(k, "lengthscale") and k.lengthscale is not None:
+                k.lengthscale = value
+        self.lengthscale_ = value
+        return 0
+
+    def forward(self, x1, x2, diag=False, **params):
+        if diag:
+            return sum(k(x1, x2, diag=True, **params) for k in self.kernels)
+        else:
+            return sum(k(x1, x2, diag=False, **params) for k in self.kernels)
+
+def get_kernel(sett: KernelSettings) -> _Kernel:
     name, nu, dims, terms = sett
     match name:
         case "RBF": return ScaleKernel(RBFKernel(ard_num_dims=dims))
@@ -361,4 +399,7 @@ def get_kernel(sett) -> _Kernel:
             ScaleKernel(NSMKernel(LocalFourier(dims-1, terms), DiagonalLocalFourier(dims-1, terms), name)(nu, ard_num_dims=dims-1)) * PeriodicKernel(ard_num_dims=dims-1)
             ))
         case "RBFPP": return ScaleKernel(RBFKernel(ard_num_dims=dims)) * (ScaleKernel(PeriodicKernel(ard_num_dims=dims)) + ScaleKernel(PeriodicKernel(ard_num_dims=dims)))
+        case "Stacked_RBF": return ScaleKernel(StackedKernel(sett))
+        case "Stacked_RBFP": return ScaleKernel(StackedKernel(sett))
+        case "Stacked_LF_NSM": return ScaleKernel(StackedKernel(sett))
         case _: raise RuntimeError(f"Kernel name '{name}' doesn't match anything!")

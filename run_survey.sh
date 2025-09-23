@@ -9,14 +9,11 @@ else
 fi
 
 for term in 5; do
-  sed -i "328s/.*terms  = .*/    terms  = $term/" $EXE
-  for i in {0..0}; do
-    sed -i "323s/.*acquisition_function = .*/    acquisition_function = $i/" $EXE
-    for j in {2..3}; do
-      sed -i "325s/.*Xnormalizer_type = .*/    Xnormalizer_type = $j/" $EXE
-      for k in {1..5}; do
+  for i in {0..2}; do
+    for j in {0..3}; do
+      for k in {1..4}; do
         LOG=compute$((i+j+k)).log
-        python $EXE | tee $LOG
+        python $EXE -a $i -x $j -t $term | tee $LOG
         mv $LOG $LOG_DIR
       done
     done

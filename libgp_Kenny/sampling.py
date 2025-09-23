@@ -38,13 +38,15 @@ class SampleStrategy(ABC):
     def spread_n_largest(arr: Array, n: int, spread: Array) -> Array:
         masked = arr[1:]
         found = [arr[0]] # First is always 0.
+        # print("Reports from sampling.SampleStrategy.spread_n_largest:")
+        # print("Shapes:", masked.shape, np.array(found).shape, spread.shape)
         for i in range(n-1):
             diff = (masked - found[-1]) / spread
             mask = np.where(np.linalg.norm(diff, axis=-1) >= 1)[0]
             found.append(masked[mask[0]]) # Append the first found one.
             masked = masked[mask[1:]] # New valid candidates
 
-        return np.array(found).squeeze()
+        return np.array(found)
 
     def new_sample_indices(
             self,
@@ -76,9 +78,18 @@ class SampleStrategy(ABC):
 
         metric = self.metric(gp, candidates, marked_axes) # Compute metric at candidate points
 
+        # print("Reports from sampling.SampleStrategy.new_sample_indices:")
+        # print("candidates.shape:", candidates.shape)
+        # print("metric.shape:", metric.shape)
+        # print("SampleStrategy.argsort(metric).shape:", SampleStrategy.argsort(metric).shape)
+
         # Sort candidates by metric.
-        candidates = candidates[SampleStrategy.argsort(metric)[::-1]].squeeze()
+        sorted_idx = SampleStrategy.argsort(metric)[::-1]
+        candidates = np.squeeze(candidates[sorted_idx], axis=-1)
         new_indices = SampleStrategy.spread_n_largest(candidates, add, spread)
+        
+        # print("candidates.shape:", candidates.shape)
+        # print("new_indices.shape:", new_indices.shape)
 
         # Cancatenate old and new
         return np.concatenate((old_indices, new_indices))
@@ -222,6 +233,12 @@ class VarianceMinimizer(SampleStrategy):
     def weights(self, gp: GP, indices: Array, marked_axes: Tuple[int]) -> Tensor:
         return np.ones(indices.shape[0])
 
+class VarianceMinimizer_1d(VarianceMinimizer):
+    name = "GW_VM"
+
+    def metric(self, gp: GP, candidates: Array, marked_axes: Tuple[int]) -> Array:
+        return super().metric(gp, candidates, marked_axes)
+
 class GradientWeightedVM(VarianceMinimizer):
     name = "GW_VM"
 
@@ -277,7 +294,8 @@ class Sampler(ABC):
 
     def initial(self) -> None:
         axes = tuple(sorted(set(range(self.domain.n)).difference(set(self.marked_axes))))
-        self.indices = self.domain.lhs_like(self.start, axes, self.seed)
+        self.indices = self.domain.indices
+        # self.indices = self.domain.lhs_like(self.start, axes, self.seed)
 
     def next(self, gp: GP) -> None:
         self.indices = self.strategy.new_sample_indices(self.add, gp, self.indices, self.spread, self.marked_axes)
@@ -285,8 +303,13 @@ class Sampler(ABC):
     def sample(self) -> DataPair:
         flat_indices = np.ravel_multi_index(self.indices.T, self.domain.range_shape)
         x = self.domain.raveled[flat_indices]
+        # print("Report from sampling.Sampler.sample:")
+        # print("self.indices.T.shape =", self.indices.T.shape)
+        # print("self.domain.range_shape =", self.domain.range_shape)
+        # print("flat_indices.shape =", flat_indices.shape)
+        # print("x.shape =", x.shape)
         return DataPair(
-            x, self.truth(x)
+            np.squeeze(x, axis=-1), np.squeeze(self.truth(x), axis=-1)
         )
 
     @abstractmethod

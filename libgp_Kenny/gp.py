@@ -26,6 +26,10 @@ class ExactGPModel(gpy.models.ExactGP):
                  likelihood: Likelihood,
                  kernel: Kernel
     ):
+        if isinstance(train_x, torch.Tensor) and torch.is_complex(train_x): 
+            raise RuntimeError("Complex train x")
+        if isinstance(train_y, torch.Tensor) and torch.is_complex(train_y): 
+            raise RuntimeError("Complex train y")
         super(ExactGPModel, self).__init__(train_x, train_y, likelihood)
         self.kernel_name = kernel
         self.mean_module = gpy.means.ConstantMean()
@@ -62,13 +66,15 @@ class GaussianProcess:
                  domain: Domain,
                  kern_sett: KernelSettings,
                  samp_sett: SamplerSettings,
-                 chunk_shape: Optional[Tuple[int]] = None
+                 chunk_shape: Optional[Tuple[int]] = None,
+                 verbose: bool = False
     ) -> None:
         self.domain = domain
         self.kern_sett = kern_sett
         self.samp_sett = samp_sett
         self.__chunks = True
         self.iter = 1
+        self.verbose = verbose
 
         if chunk_shape is None:
             self.__chunks = False
@@ -88,7 +94,9 @@ class GaussianProcess:
 
             self.samplers[i] = Sampler.from_settings(samp_sett, dom, num_chunks)
             self.samplers[i].initial() # Set sampler to initial state.
-            self.gps[i] = GaussianProcessChunk(dom, get_kernel(self.kern_sett), self.samplers[i])
+            self.gps[i] = GaussianProcessChunk(
+                dom, get_kernel(self.kern_sett), self.samplers[i], self.verbose
+                )
             self.gps[i].iter = 0
     
     def update_domain(self, new_domain: Domain):
@@ -96,7 +104,9 @@ class GaussianProcess:
         domains = self.domain.chunk(self.chunk_shape)
         for i in product(*self.__chunk_iter):
             # self.gps[i].update_domain(domains[i])
-            self.gps[i] = GaussianProcessChunk(domains[i], get_kernel(self.kern_sett), self.samplers[i])
+            self.gps[i] = GaussianProcessChunk(
+                domains[i], get_kernel(self.kern_sett), self.samplers[i], self.verbose
+                )
             self.gps[i].iter = self.iter
         # num_chunks = self.samplers.size
         # for i in product(*self.__chunk_iter):
@@ -114,10 +124,10 @@ class GaussianProcess:
 
         t_end = timer()
         time = (t_end - t_start)
-        print(f"[{color('OK', '*G')}] Training: {time:.2f}s", flush=True)
+        if self.verbose: print(f"[{color('OK', '*G')}] Training: {time:.2f}s", flush=True)
 
     def prediction(self, return_raw: bool = False) -> Prediction:
-        print(f"[{color('—', 'Y')}] Predicting...", flush=True)
+        if self.verbose: print(f"[{color('—', 'Y')}] Predicting...", flush=True)
         t_start = timer()
         means, vars = np.empty(self.chunk_shape, dtype=object), np.empty(self.chunk_shape, dtype=object)
         for i in product(*self.__chunk_iter):
@@ -125,8 +135,8 @@ class GaussianProcess:
 
         t_end = timer()
         time = round(1000*(t_end - t_start))
-        sys.stdout.write("\033[F\033[K")
-        print(f"[{color('OK', '*G')}] Predicting Done: {time}ms", flush=True)
+        if self.verbose: sys.stdout.write("\033[F\033[K")
+        if self.verbose: print(f"[{color('OK', '*G')}] Predicting Done: {time}ms", flush=True)
         
         if return_raw: 
             return Prediction(means, vars)
@@ -146,19 +156,21 @@ class GaussianProcess:
         if np.all(thres): return False
         self.iter += 1
 
-        print(f"[{color('—', 'Y')}] Calculating Next Samples...", flush=True)
+        if self.verbose: print(f"[{color('—', 'Y')}] Calculating Next Samples...", flush=True)
         t_start = timer()
         for i in product(*self.__chunk_iter):
             dom, kern = self.gps[i].domain, get_kernel(self.kern_sett)
             self.samplers[i].next(self.gps[i]) # Set sampler to next active sample.
-            self.gps[i] = GaussianProcessChunk(dom, kern, self.samplers[i])
+            self.gps[i] = GaussianProcessChunk(
+                dom, kern, self.samplers[i], self.verbose
+                )
             self.gps[i].iter = self.iter
             gc.collect()
 
         t_end = timer()
         time = round(1000*(t_end - t_start))
-        sys.stdout.write("\033[F\033[K")
-        print(f"[{color('OK', '*G')}] Next Samples Calculated: {time}ms", flush=True)
+        if self.verbose: sys.stdout.write("\033[F\033[K")
+        if self.verbose: print(f"[{color('OK', '*G')}] Next Samples Calculated: {time}ms", flush=True)
         return True
 
     def save(self, path: Path) -> None:
@@ -186,12 +198,21 @@ class GaussianProcessChunk:
     model: gpy.models.ExactGP
 
 
-    def __init__(self, domain: Domain, kernel: Kernel, sampler: Sampler) -> None:
+    def __init__(self, 
+                 domain: Domain, 
+                 kernel: Kernel, 
+                 sampler: Sampler,
+                 verbose: bool
+                 ) -> None:
         self.domain = domain
         self.sampler = sampler
+        self.verbose = verbose
 
         # Initialize sample data for GP to train on through Sampler.
         self.train_data = self.sampler.sample()
+        # print("report from GaussianProcessChunk.__init__")
+        # print("x.dtype:", self.train_data.x.dtype)
+        # print("y.dtype:", self.train_data.y.dtype)
         self.__train_cuda = DataPair(self.domain.normalize(self.train_data.x),
                                      self.train_data.y
                                      ).to(device)
@@ -223,7 +244,7 @@ class GaussianProcessChunk:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         mll = gpy.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iter//5, eta_min=1e-4)
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=lr, total_steps=iter)
+        # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=lr, total_steps=iter)
 
         #num_down = 0
         #last_loss = 1e10
@@ -247,17 +268,18 @@ class GaussianProcessChunk:
                 #         g['lr'] *= 0.8
                 
                 hashes = int(21 * i_cur / iterations)
-                sys.stdout.write("\033[K")
-                print(
+                if self.verbose: sys.stdout.write("\033[K")
+                if self.verbose:
+                    print(
                         f'{chunk}Training {i_cur+1:04}/{iterations:04} |{"#"*hashes}{" "*(20-hashes)}|'
                         + f" Loss: {loss.item():.3f} Rate: {optimizer.param_groups[0]['lr']:.3f}",
                         flush=True,
                         end = "\r",
-                    )
+                        )
                 i_cur += 1
                 optimizer.step()
-            scheduler.step()
-        print()
+            # scheduler.step()
+        if self.verbose: print()
 
     @property
     # @cached_property
@@ -272,7 +294,8 @@ class GaussianProcessChunk:
 
             for i in range(math.ceil(size/CHUNK)):
                 xi = x_flat[i*CHUNK:(i+1)*CHUNK]
-                validate = self.model(xi) # We have no noise, so likelihood is unnecessary.
+                # print("xi.dtype from gp.GaussianProcessChunk.predictio:n", xi.dtype)
+                validate = self.model(xi.double()) # We have no noise, so likelihood is unnecessary.
 
                 if i == 0:
                     mean, variance = validate.mean, validate.variance

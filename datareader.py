@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 
 class fileIOdatareader:
 
-    def __init__(self, datapath: Path, print_info=False):
+    def __init__(self, datapath: Path, print_info=True):
         self._read_data_kenny_format(datapath)
         if print_info:
             print(f"Data loaded from {datapath}")
@@ -37,10 +37,17 @@ class fileIOdatareader:
         return self._y
 
     def _read_data_kenny_format(self, file: str):
-        from copy import deepcopy
+        print(type(file))
+        if isinstance(file, Path): file = file.name
+        if   file == "data/data-for-kenny-paper-HH.npz": 
+            re_key, im_key = 'Cpol(re)(90.0)', 'Cpol(im)(90.0)'
+        elif file == "data/data-for-kenny-paper-VV.npz": 
+            re_key, im_key = 'Cpol(re)(0.0)', 'Cpol(im)(0.0)'
+        else:
+            raise RuntimeError(f"{file} not suppported")
         x_names, y_names, mhz, phi, data = np.load(file).values()
         data_dict = {y:d for y,d in zip(y_names,data)}
-        dreal, dimag = data_dict['Cpol(re)(90.0)'], data_dict['Cpol(im)(90.0)']
+        dreal, dimag = data_dict[re_key], data_dict[im_key]
         complex_data = (dreal + 1j * dimag).T
         _M, _P = np.meshgrid(mhz, phi, indexing="xy")  # shapes: (101, 181)
         coords = np.stack([_M, _P], axis=-1)           # shape: (101, 181, 2)

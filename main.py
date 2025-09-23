@@ -28,29 +28,35 @@ from acquisitionfunctions import *
 #     resp = 1.0 / (1.0 - (f/5.0)**2 + 0.1j) * np.cos(th)
 #     return resp
 
-def train_gp(X, Y, terms: int = 1):
-    from sklearn.gaussian_process import GaussianProcessRegressor
-    from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
-    from sklearn.gaussian_process.kernels import ExpSineSquared
-    kernel = None
-    for i in range(terms):
-        kernel_constant = C(1.0, (1e-10, 1e3))
-        kernel_rbf = RBF(1.0, (1e-10, 1e3))
-        kernel_periodic = ExpSineSquared(1.0, 1.0, (1e-10, 1e4), (1e-10, 1e4))
-        if i==0: kernel  = kernel_constant * kernel_rbf * kernel_periodic
-        else:    kernel += kernel_constant * kernel_rbf * kernel_periodic
-    gp_r = GaussianProcessRegressor(kernel=kernel, alpha=1e-8, normalize_y=True, n_restarts_optimizer=10)
-    gp_i = GaussianProcessRegressor(kernel=kernel, alpha=1e-8, normalize_y=True, n_restarts_optimizer=10)
-    gp_r.fit(X, Y.real)
-    gp_i.fit(X, Y.imag)
-    # with warnings.catch_warnings():
-    #     warnings.simplefilter("ignore")
-    #     gp_r.fit(X, Y.real)
-    #     gp_i.fit(X, Y.imag)
-    return gp_r, gp_i
+# def train_gp(
+#     X, Y, terms: int = 1, 
+#     training_iter=1000, verbose=False, normalize_y=True
+# ):
+#     from sklearn.gaussian_process import GaussianProcessRegressor as GPR
+#     from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+#     from sklearn.gaussian_process.kernels import ExpSineSquared
+#     kernel = None
+#     for i in range(terms):
+#         kernel_constant = C(1.0, (1e-10, 1e3))
+#         kernel_rbf = RBF(1.0, (1e-10, 1e3))
+#         kernel_periodic = ExpSineSquared(1.0, 1.0, (1e-10, 1e4), (1e-10, 1e4))
+#         if i==0: kernel  = kernel_constant * kernel_rbf * kernel_periodic
+#         else:    kernel += kernel_constant * kernel_rbf * kernel_periodic
+#     gp_r = GPR(kernel=kernel, alpha=1e-8, normalize_y=normalize_y, n_restarts_optimizer=10)
+#     gp_i = GPR(kernel=kernel, alpha=1e-8, normalize_y=normalize_y, n_restarts_optimizer=10)
+#     gp_r.fit(X, Y.real)
+#     gp_i.fit(X, Y.imag)
+#     # with warnings.catch_warnings():
+#     #     warnings.simplefilter("ignore")
+#     #     gp_r.fit(X, Y.real)
+#     #     gp_i.fit(X, Y.imag)
+#     return gp_r, gp_i
 
-# from gp_Kenny import train_model_gp_Kenny
-# train_gp = train_model_gp_Kenny
+from gp_Kenny import train_model_gp_Kenny
+train_gp = train_model_gp_Kenny
+
+# from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode
+# train_gp = train_model_gp_Kenny_from_mode
 
 class dummy_preprocesser:
     def __init__(self):
@@ -201,83 +207,97 @@ class ReducedBasisGP:
     #     return 0
         
     def _fit_gps(self):
-        # self.gps_real = [None] * self.r
-        # self.gps_imag = [None] * self.r
-        def _train_one(i, x_train, coeffs, r):
-            y_train = coeffs[:, i]
-            gp_r, gp_i = train_gp(x_train, y_train, terms=self.terms)
-            return gp_r, gp_i
-            # self.gps_real[i] = gp_r
-            # self.gps_imag[i] = gp_i
-            # return None
+        # # self.gps_real = [None] * self.r
+        # # self.gps_imag = [None] * self.r
+        # def _train_one(i, x_train, coeffs, r):
+        #     y_train = coeffs[:, i][:, None]
+        #     gp_r, gp_i = train_gp(
+        #         x_train, y_train, terms=self.terms, 
+        #         training_iter=1000, verbose=True
+        #         )
+        #     return gp_r, gp_i
+        #     # self.gps_real[i] = gp_r
+        #     # self.gps_imag[i] = gp_i
+        #     # return None
         
-        x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
+        # x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
 
-        # Parallel training
-        results = Parallel(n_jobs=-1)(  # use all cores
-            delayed(_train_one)(i, x_train, self.coeffs, self.r)
-            for i in range(self.r)
-        )
+        # # Parallel training
+        # results = Parallel(n_jobs=-1)(  # use all cores
+        #     delayed(_train_one)(i, x_train, self.coeffs, self.r)
+        #     for i in range(self.r)
+        # )
 
-        # Unpack results
-        self.gps_real, self.gps_imag = zip(*results)
-        # Convert back to lists if needed
-        self.gps_real, self.gps_imag = list(self.gps_real), list(self.gps_imag)
+        # # Unpack results
+        # self.gps_real, self.gps_imag = zip(*results)
+        # # Convert back to lists if needed
+        # self.gps_real, self.gps_imag = list(self.gps_real), list(self.gps_imag)
 
         # threads = [threading.Thread(target=_train_one, args=(i,x_train,)) for i in range(self.r)]
         # for t in threads: t.start()
         # for t in threads: t.join()
+        
+        self.gps_real = []
+        self.gps_imag = []
+        x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
 
-        # for i in range(self.r):
-        #     # Separate real and imaginary parts
-        #     y_train = self.coeffs[:, i]
-        #     gp_r, gp_i = train_gp(x_train, y_train, terms=self.r)
-        #     self.gps_real.append(gp_r)
-        #     self.gps_imag.append(gp_i)
+        for i in range(self.r):
+            # Separate real and imaginary parts
+            y_train = self.coeffs[:, i][:, None]
+            gp_r, gp_i = train_gp(
+                x_train, y_train, terms=self.terms, 
+                training_iter=1000, verbose=True, normalize_y=True
+                )
+            self.gps_real.append(gp_r)
+            self.gps_imag.append(gp_i)
+
         return 0
             
     def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
         """Pick frequency that maximizes integrated variance across coefficients"""
-        # mu_list = [None] * self.r
-        # var_list = [None] * self.r
-        def _predict_one(i, gps_real, gps_imag, S, grid):
-            mu_r, std_r = gps_real[i].predict(grid, return_std=True)
-            mu_i, std_i = gps_imag[i].predict(grid, return_std=True)
-            weight = S[i]**2
-            return weight * (mu_r**2 + mu_i**2), weight * (std_r**2 + std_i**2)
-            # mu_list[i]  = weight * (mu_r**2 + mu_i**2)
-            # var_list[i] = weight * (std_r**2 + std_i**2)
-            # return None
+        # # mu_list = [None] * self.r
+        # # var_list = [None] * self.r
+        # def _predict_one(i, gps_real, gps_imag, S, grid):
+        #     mu_r, std_r = gps_real[i].predict(grid, return_std=True)
+        #     mu_i, std_i = gps_imag[i].predict(grid, return_std=True)
+        #     weight = S[i]**2
+        #     return weight * (mu_r**2 + mu_i**2), weight * (std_r**2 + std_i**2)
+        #     # mu_list[i]  = weight * (mu_r**2 + mu_i**2)
+        #     # var_list[i] = weight * (std_r**2 + std_i**2)
+        #     # return None
         
         # grid = self.normalizerX.transform(np.linspace(f_min, f_max, n_grid)[:, None])
-        freq_lhs = self.latin_hypercube_sampling(f_min, f_max, n_grid)
-        grid = self.normalizerX.transform(freq_lhs[:, None])
+        # # freq_lhs = self.latin_hypercube_sampling(f_min, f_max, n_grid)
+        # # grid = self.normalizerX.transform(freq_lhs[:, None])
 
-        results = Parallel(n_jobs=-1)(  # -1 = all cores
-            delayed(_predict_one)(i, self.gps_real, self.gps_imag, self.S, grid)
-            for i in range(self.r)
-        )
+        # results = Parallel(n_jobs=-1)(  # -1 = all cores
+        #     delayed(_predict_one)(i, self.gps_real, self.gps_imag, self.S, grid)
+        #     for i in range(self.r)
+        # )
 
-        total_mu, total_var = np.sum(np.array(results), axis=0)
+        # total_mu, total_var = np.sum(np.array(results), axis=0)
 
-        # threads = [threading.Thread(target=_predict_one, args=(i, self.gps_real, self.gps_imag, self.S, grid)) for i in range(self.r)]
-        # for t in threads: t.start()
-        # for t in threads: t.join()
+        # # threads = [threading.Thread(target=_predict_one, args=(i, self.gps_real, self.gps_imag, self.S, grid)) for i in range(self.r)]
+        # # for t in threads: t.start()
+        # # for t in threads: t.join()
 
-        # total_mu = np.sum(mu_list, axis=0)
-        # total_var = np.sum(var_list, axis=0)
+        # # total_mu = np.sum(mu_list, axis=0)
+        # # total_var = np.sum(var_list, axis=0)
 
-        # grid = self.normalizerX.transform(np.linspace(f_min, f_max, n_grid)[:, None])
-        # total_mu = np.zeros(n_grid)
-        # total_var = np.zeros(n_grid)
-        # for i in range(self.r):
-        #     mu_r, std_r = self.gps_real[i].predict(grid, return_std=True)
-        #     mu_i, std_i = self.gps_imag[i].predict(grid, return_std=True)
-        #     # weight variance by singular value (importance of mode)
-        #     weight = self.S[i]**2
-        #     total_mu += weight * (mu_r**2 + mu_i**2)
-        #     total_var += weight * (std_r**2 + std_i**2)
+        grid = self.normalizerX.transform(np.linspace(f_min, f_max, n_grid)[:, None])
+        total_mu, total_var = np.zeros(n_grid), np.zeros(n_grid)
+        # preds = []
+        for i in range(self.r):
+            mu_r, std_r = self.gps_real[i].predict(grid, return_std=True)
+            mu_i, std_i = self.gps_imag[i].predict(grid, return_std=True)
+            # weight variance by singular value (importance of mode)
+            weight = self.S[i]**2
+            total_mu += weight * (mu_r**2 + mu_i**2)
+            total_var += weight * (std_r**2 + std_i**2)
+            # preds.append(weight * (mu_r**2 + mu_i**2))
 
+        # print(np.array(preds))
+        
         responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
         loss_per_freq = np.mean(np.square(self.responses-responses_pred), axis=1)
         self.fbest = total_mu[np.argmin(loss_per_freq)]
@@ -315,26 +335,64 @@ class ReducedBasisGP:
             # reconstruct: coeffs_pred * Vh
             return coeffs_pred @ self.Vh
         return np.array([get_y_pred_per_f(f_query) for f_query in f_query_arr])
+    
+
+def configuration():
+    from argparse import ArgumentParser
+    ac_fx_types = [
+        "maximum variance", "expected improvement", "upper confidence bound"
+        ]
+    xnorm_types = [
+        "pass", "z-score", "min-max", "power transform", 
+        "standardized power transform", "scaled z-score"
+        ]
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", default="0", 
+        help=f"type of acquisition function [{ac_fx_types}]")
+    parser.add_argument(
+        "-x", "--xn", "--X-normalizer", dest="xn", default="0", 
+        help=f"type of X-normalizer [{xnorm_types}]")
+    parser.add_argument(
+        "-n", "--n-init", dest="n", default="3", 
+        help=f"initial number of frequency samples")
+    parser.add_argument(
+        "-t", "--terms", dest="t", default="3", 
+        help=f"number of terms [stacked-RBFP and LF-NSM]")
+    parser.add_argument(
+        "-i", "--max-iter", dest="i", default="20", 
+        help=f"maximum iteration. maximum samples = n_init + max_iter")
+    parser.add_argument(
+        "-T", "--tol", dest="tol", default="1e-5", 
+        help=f"tolerance for varinace. terminates iteration if tol > var")
+    return parser.parse_args()
 
 
 def main():
+    config = configuration()
     # -----------------------
     # CONFIG
     # -----------------------
     adaptive_basis = True
-    acquisition_function = 0
-    acquisition_function_candidate = ["maximum variance", "expected improvement", "upper confidence bound"]
-    Xnormalizer_type = 2
-    Xnormalizer_type_candidate = ["pass", "z-score", "min-max", "power transform", "standardized power transform", "scaled z-score"]
-    n_init = 3
-    terms  = 5
-    max_iter = 20
-    tol = 1e-5
+    acquisition_function = int(config.ac_fx)
+    acquisition_function_candidate = [
+        "maximum variance", "expected improvement", "upper confidence bound"
+    ]
+    Xnormalizer_type = int(config.xn)
+    Xnormalizer_type_candidate = [
+        "pass", "z-score", "min-max", "power transform", 
+        "standardized power transform", "scaled z-score"
+    ]
+    n_init = int(config.n)
+    terms  = int(config.t)
+    max_iter = int(config.i)
+    tol = float(config.tol)
     # -----------------------
     # SOLVER
     # -----------------------
 
-    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
     # solver = OnFlySolver(
     #     workingpath="./data/VWT-data/sphere",
@@ -342,11 +400,11 @@ def main():
     #     angles=np.linspace(0, 180, 181)
     #     )
 
-    solver = OnFlySolver(
-        workingpath="./data/VWT-data/prime-airplane",
-        model_name="Open-Duct_PRIME_model_meshAA",
-        angles=np.linspace(0, 180, 181)
-        )
+    # solver = OnFlySolver(
+    #     workingpath="./data/VWT-data/prime-airplane",
+    #     model_name="Open-Duct_PRIME_model_meshAA",
+    #     angles=np.linspace(0, 180, 181)
+    #     )
     # -----------------------
     # OUTPUT DRIECTORY SETUP
     # -----------------------
@@ -377,11 +435,13 @@ def main():
     rbgp = ReducedBasisGP(solver, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
                           acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, terms=terms)
     rbgp.initialize(f_min=f_min, f_max=f_max)
-
+    make_pretty_number = lambda freq: str(round(freq, 3))
+    pretty_number = list(map(make_pretty_number,rbgp.freqs))
+    print(f"\n  >> Initial Frequencies: {pretty_number}\n")
 
     # max_iter = len(f_test) - n_init
     for it in range(max_iter):  # 5 adaptive iterations
-        f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, 4*len(f_test))
+        f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, len(f_test))
         print(f"\nIteration {it+1} / {max_iter}: acquisition {ac_fx:.10f} | variance {avg_var:.10f}")
         print("number of frequency samples:", len(rbgp.freqs))
         print(f"sampling new frequency {f_next:.3f}")
@@ -428,8 +488,8 @@ def main():
     hf, hx = subplots(nrows=nrows, ncols=ncols, figsize=(16,8), constrained_layout=True)
     extent = [rbgp.angles.min(), rbgp.angles.max(), f_test.min(), f_test.max()]
     im = np.empty((nrows,ncols), dtype="object")
-    error_real = 20 * np.log10(np.square(np.abs(pred.real - truth.real)) / np.square(np.abs(truth.real)))
-    error_imag = 20 * np.log10(np.square(np.abs(pred.imag - truth.imag)) / np.square(np.abs(truth.imag)))
+    error_real = 10 * np.log10(np.square(np.abs(pred.real - truth.real)) / np.square(np.abs(truth.real)))
+    error_imag = 10 * np.log10(np.square(np.abs(pred.imag - truth.imag)) / np.square(np.abs(truth.imag)))
     error = error_real + 1j*error_imag
     im[0,0] = hx[0,0].imshow(pred.real,  cmap="turbo", aspect="auto", extent=extent)
     im[0,1] = hx[0,1].imshow(truth.real, cmap="turbo", aspect="auto", extent=extent)

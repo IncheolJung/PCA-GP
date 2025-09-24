@@ -144,11 +144,11 @@ def main():
         f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, len(f_test))
         print(f"\nIteration {it+1} / {max_iter}: acquisition {ac_fx:.10f} | variance {avg_var:.10f}")
         print("number of frequency samples:", len(rbgp.freqs))
+        if avg_var < tol: 
+            break
         print(f"sampling new frequency {f_next:.3f}")
         rbgp.update(f_next)
         stdout.flush()
-        if avg_var < tol: 
-            break
     print("\n ======  Stopping criterion met.  ====== \n")
     print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
     print("  >> Final acquisition:", ac_fx, sep="\t")
@@ -189,10 +189,10 @@ def main():
     extent = [rbgp.angles.min(), rbgp.angles.max(), f_test.min(), f_test.max()]
     im = np.empty((nrows,ncols), dtype="object")
     eps = 1e-12  # small number to avoid log(0)
-    numer_real = np.square(np.abs(pred.real - truth.real)) + eps
-    denom_real = np.square(np.abs(truth.real)) + eps
-    numer_imag = np.square(np.abs(pred.imag - truth.imag)) + eps
-    denom_imag = np.square(np.abs(truth.imag)) + eps
+    numer_real = np.square(np.abs(pred.real - truth.real))
+    denom_real = np.square(np.max(truth.real) - np.min(truth.real))
+    numer_imag = np.square(np.abs(pred.imag - truth.imag))
+    denom_imag = np.square(np.max(truth.imag) - np.min(truth.imag))
     error_real = 10 * np.log10(numer_real / denom_real)
     error_imag = 10 * np.log10(numer_imag / denom_imag)
     error = error_real + 1j*error_imag

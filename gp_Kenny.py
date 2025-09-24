@@ -5,6 +5,7 @@ from gpytorch.utils.warnings import GPInputWarning
 from copy import deepcopy
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cpu'
 
 
 class GPModel(gpytorch.models.ExactGP):
@@ -104,8 +105,8 @@ def train_model_per_batch(
     # print("Input shapes:", train_x.shape, train_y.shape)
 
     # kern_sett = KernelSettings("Stacked_RBFP", nu=0.5, terms=terms, dims=dims)
-    kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
     kernel = get_kernel(kern_sett).double().to(device)
@@ -151,7 +152,7 @@ def train_model_per_batch(
     patience = int(training_iter/3)
     # patience = 10 * min(10, int(log10(training_iter))) + 5
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.2)
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(
         likelihood, model
     ).to(device)
@@ -197,16 +198,22 @@ def train_model_per_batch(
                 print(end_phrase, flush=True, end='\033[K\r')
             break
     if verbose and patience_counter < patience:
+        it = f"({i+1}/{training_iter})"
+        tab = " "*6
+        lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
         cost = f"loss: {loss:.4f}"
         end_phrase = f".....Finish! {it}{tab}{lr}{tab}{cost}{tab}"
         print(end_phrase, flush=True, end='\033[K\r')
 
     # Fine-tuning
-    fine_tuning_iter = 10
+    fine_tuning_iter = training_iter - i + 21
+    fine_tuning_lr   = 2*optimizer.param_groups[0]['lr']    # 2*last_lr
+    # end_phrase = f"Training.... "
     # finetuner = torch.optim.Rprop(model.parameters(), lr=0.01)
     finetuner = torch.optim.LBFGS(
-        model.parameters(), lr=0.01, max_iter=fine_tuning_iter,
-        history_size=10, line_search_fn="strong_wolfe"
+        model.parameters(), lr=fine_tuning_lr, 
+        max_iter=fine_tuning_iter,
+        # history_size=10, line_search_fn="strong_wolfe"
         )
     def closure():
         finetuner.zero_grad()
@@ -216,7 +223,7 @@ def train_model_per_batch(
         if verbose:
             if loss.item()>1e3: loss_stdout = f"{loss.item():.4e}"
             else: loss_stdout = f"{loss.item():.4f}"
-            print(end_phrase, f"LBFGS step loss: {loss_stdout}", 
+            print(end_phrase, f"LBFGS loss: {loss_stdout}", 
                   sep=" "*4, end='\033[K\r', flush=True)
         return loss
     finetuner.step(closure)

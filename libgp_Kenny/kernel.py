@@ -245,7 +245,7 @@ class LocalFourier(KFunction):
     def parameters(self):
         return {
             "amps": ((2, self.normalize - 1,), Positive()),
-            "phases": ((2, self.normalize - 1,), Interval(-1.5*torch.pi, 1.5*torch.pi)),
+            "phases": ((2, self.normalize - 1,), Interval(-3.0*torch.pi, 3.0*torch.pi)),
             "period": ((1,), Positive()),
             "scale": ((1,), Positive())
         }
@@ -275,7 +275,7 @@ class DiagonalLocalFourier(KFunction):
     def parameters(self):
         return {
             "amps": ((2, 1, self.ard_num_dims, self.freqs,), Positive()),
-            "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-1.5*torch.pi, 1.5*torch.pi)),
+            "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-3.0*torch.pi, 3.0*torch.pi)),
             "period": ((self.ard_num_dims, 1), Positive()),
             "scale": ((1,), Positive())
         }
@@ -288,7 +288,7 @@ class DiagonalLocalFourier(KFunction):
         sin = torch.sin((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[0])/self.freqs
         cos = torch.cos((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[1])/self.freqs
         summed = (sin*amps[0] + cos*amps[1]).sum(dim=-1)
-        return torch.exp(-scale*summed)
+        return torch.exp(-scale*summed)+1e-12
 
 # \Sigma defined in Noack, 2022, Advanced Stationary...
 # def forward(self, x1: Tensor, x2: Tensor, kernel: Kernel, diag: bool = False) -> Tensor:
@@ -371,6 +371,10 @@ def get_kernel(sett: KernelSettings) -> _Kernel:
         case "Matern": return ScaleKernel(MaternKernel(nu, ard_num_dims=dims))
         case "MaternPer": return ScaleKernel(MaternKernel(nu, ard_num_dims=dims)) * PeriodicKernel(ard_num_dims=dims)
         case "REG_NSM": return ScaleKernel(NSMKernel(LogLinearRegressor(dims), DiagonalCovarianceRegressor(dims), name)(nu, ard_num_dims=dims))
+        # case "LF_NSM": return ScaleKernel(
+        #     NSMKernel(
+        #         LocalFourier(dims, terms), DiagonalLocalFourier(dims, terms), name)(nu, ard_num_dims=dims)
+        #     ) * PeriodicKernel(ard_num_dims=dims)
         case "LF_NSM": return ScaleKernel(NSMKernel(LocalFourier(dims, terms), DiagonalLocalFourier(dims, terms), name)(nu, ard_num_dims=dims)) * PeriodicKernel(ard_num_dims=dims)
         case "LF_NSRBF": return ScaleKernel(NSMKernel(LocalFourier(dims, terms), DiagonalLocalFourier(dims, terms), name)(np.inf, ard_num_dims=dims)) * PeriodicKernel(ard_num_dims=dims)
         case "LF_NSM_noPer": return ScaleKernel(NSMKernel(LocalFourier(dims, terms), DiagonalLocalFourier(dims, terms), name)(nu, ard_num_dims=dims))

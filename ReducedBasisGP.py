@@ -221,7 +221,7 @@ class ReducedBasisGP:
                 break
         denom = self.r/len(self.freqs)
 
-        return f_domain[idx, 0], np.sum(ac_vals)/denom, np.sum(total_var)/denom
+        return f_domain[idx, 0], ac_vals[idx], np.sum(total_var)/denom
     
     def update(self, f_new):
         y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])

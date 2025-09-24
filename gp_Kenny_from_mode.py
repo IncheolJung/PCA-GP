@@ -159,7 +159,7 @@ class Adaptive(GaussianProcessMode):
 
 def train_model_gp_Kenny_from_mode(
         train_x, train_y, terms=4, training_iter: int = 100, 
-        verbose = False, normalize_y=True
+        verbose = False, normalize_y=True, dims = 1
         ):
     # print("Reports from gp_Kenny_from_mode.train_model_gp_Kenny_from_mode:")
     # print("train_x.dtype:", train_x.dtype)
@@ -170,8 +170,8 @@ def train_model_gp_Kenny_from_mode(
         # ["Cpol(re)(90.0)"], ["Cpol(im)(90.0)"], 
     ]
     kern_setts = [
-        KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=1),
-        KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=1),
+        KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims),
+        KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims),
     ]
     strategies = [
         Random(),

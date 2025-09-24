@@ -27,8 +27,8 @@ def solver(frequencies, angles):
 # sklearn gp
 # -----------------------
 def train_gp_sklearn(
-    X, Y, terms: int = 1, 
-    training_iter=1000, verbose=False, normalize_y=True
+    X, Y, terms: int = 1, training_iter=1000, 
+    verbose=False, normalize_y=True, dims = 1
 ):
     kernel = None
     for i in range(terms):

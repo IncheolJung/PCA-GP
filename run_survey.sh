@@ -9,12 +9,12 @@ else
 fi
 
 for term in 5; do
-  for i in {0..0}; do
-    for j in {1..3..2}; do
+  for i in {0..2}; do
+    for j in {0..5}; do
       for trial in {1..5}; do
         LOG=compute$((i+j+trial)).log
-        # LHS for sampling in variance calc
-        python $EXE -a $i -x $j -s 1 -t $term | tee $LOG
+        # grid sampling for variance calc
+        python $EXE -a $i -x $j -s 0 -t $term | tee $LOG
         mv $LOG $LOG_DIR
       done
     done

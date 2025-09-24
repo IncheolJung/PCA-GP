@@ -2,6 +2,7 @@ from libgp_Kenny import *
 import torch, gpytorch
 import warnings
 from gpytorch.utils.warnings import GPInputWarning
+from copy import deepcopy
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -38,28 +39,39 @@ class GPModel(gpytorch.models.ExactGP):
             train_x, self.y_normalizer(train_y), likelihood
             )
         self.mean_module = gpytorch.means.ConstantMean()
-        self.covar_module = gpytorch.kernels.ScaleKernel(
-            gpytorch.kernels.RBFKernel()
-        )
+        self.covar_module = kernel
+        # self.covar_module = gpytorch.kernels.ScaleKernel(
+        #     gpytorch.kernels.RBFKernel()
+        # )
         self.likelihood = likelihood
+        self.distribute = gpytorch.distributions.MultivariateNormal
     
-    def train(self, *args):
-        self.mean_module.train()
-        self.covar_module.train()
-        self.likelihood.train()
-        return super(GPModel, self).train(*args)
+    def make_multitask(self, n_tasks):
+        self.mean_module = gpytorch.means.MultitaskMean(
+            self.mean_module, num_tasks=n_tasks
+            # deepcopy(self.mean_module), num_tasks=n_tasks
+        ).double()
+        self.covar_module = gpytorch.kernels.MultitaskKernel(
+            self.covar_module, num_tasks=n_tasks, rank=1
+            # deepcopy(self.covar_module), num_tasks=n_tasks, rank=1
+        ).double()
+        self.distribute = gpytorch.distributions.MultitaskMultivariateNormal
+        return 0
 
     def forward(self, x):
-        if not isinstance(x, torch.Tensor):
-            x = torch.from_numpy(x).view(-1,1).double().to(device)
-            # x = torch.tensor(x, dtype=torch.float64).to(device)
-            
+        # print(f"Report from gp_Kenny.GPModel.forward")
+        # print("Input shape:", x.shape)
         mean_x = self.mean_module(x)
         covar_x = self.covar_module(x)
-        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+        # print(f"Report from gp_Kenny.GPModel.forward")
+        # print("Output shape:", mean_x.shape, covar_x.shape)
+        return self.distribute(mean_x, covar_x)
 
     def predict(self, x, return_std=False):
-        x = torch.from_numpy(x).view(-1,1).double().to(device)
+        # print(f"Report from gp_Kenny.GPModel.predict")
+        # print("Input shape:", x.shape)
+        if x.ndim == 1: x = x[:, None]
+        x = torch.from_numpy(x).double().to(device)
         self.eval()
         self.likelihood.eval()
         with torch.no_grad(), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
@@ -71,51 +83,78 @@ class GPModel(gpytorch.models.ExactGP):
         if return_std:
             ystd = self.y_denorm_std(observed_pred.variance.sqrt())
             prediction.append(ystd.detach().cpu().numpy())
+        # print(f"Report from gp_Kenny.GPModel.predict")
+        # print("Output shape:", ypred.shape)
         return prediction
 
 
 def train_model_per_batch(
-        train_x, train_y, terms=4, 
-        training_iter: int = 1000, verbose = False, normalize_y=True
+        train_x, train_y, terms, training_iter, 
+        verbose, normalize_y, dims
         ):
     from numpy import log10
 
     train_x = torch.squeeze(train_x, dim=-1).double().to(device)
     train_y = torch.squeeze(train_y, dim=-1).double().to(device)
+    if train_x.ndim != train_y.ndim:
+        if (train_x.ndim==1 and train_y.ndim==2):
+            train_x = train_x.view(-1, 1)
 
-    kern_sett = KernelSettings("Stacked_RBFP", nu=0.5, terms=terms, dims=1)
-    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=1)
-    # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=1)
-    # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=1)
-    # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=1)
+    # print(f"Report from gp_Kenny.train_model_per_batch")
+    # print("Input shapes:", train_x.shape, train_y.shape)
+
+    # kern_sett = KernelSettings("Stacked_RBFP", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
     kernel = get_kernel(kern_sett).double().to(device)
     # kernel = gpytorch.kernels.ScaleKernel(
     #     gpytorch.kernels.RBFKernel()
     #     ).double().to(device)
-    if hasattr(kernel.base_kernel, "lengthscale"):
-        kernel.base_kernel.lengthscale = train_x.std()  # for RBF-type kernels
-    if hasattr(kernel.base_kernel, "outputscale"):
-        kernel.base_kernel.outputscale = train_y.std() ** 2
+    if hasattr(kernel, "base_kernel"):
+        if hasattr(kernel.base_kernel, "lengthscale"):
+            kernel.base_kernel.lengthscale = train_x.std()  # for RBF-type kernels
+        if hasattr(kernel.base_kernel, "outputscale"):
+            kernel.base_kernel.outputscale = train_y.std() ** 2
+    # if hasattr(kernel, "lengthscale"):
+    #     kernel.lengthscale = train_x.std()  # for RBF-type kernels
+    # if hasattr(kernel, "outputscale"):
+    #     kernel.outputscale = train_y.std() ** 2
 
     lower_bound = 1e-8
-    likelihood = gpytorch.likelihoods.GaussianLikelihood(
-        noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
-    ).double().to(device)
+    if train_y.ndim == 2 and train_y.shape[-1] > 1:
+        likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
+            noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
+            num_tasks=train_y.shape[-1]
+        ).double().to(device)
+    else:
+        likelihood = gpytorch.likelihoods.GaussianLikelihood(
+            noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
+        ).double().to(device)
     likelihood.noise = max(lower_bound, 1e-2 * train_y.std() ** 2)
 
     model = GPModel(
         train_x, train_y, likelihood, kernel, normalize_y=normalize_y
         ).double().to(device)
-
+    
+    if train_y.ndim == 2 and train_y.shape[-1] > 1:
+        # print(f"Setting multitask {train_y.shape[-1]}")
+        model.make_multitask(train_y.shape[-1])
+    
+    # model.make_multitask(train_y.shape[-1])
+    
     model.train()
     likelihood.train()
 
     # number of epochs to wait without improvement
-    patience = training_iter//2
-    # patience = 3 * max(10, int(log10(training_iter))) + 5
+    patience = int(training_iter/3)
+    # patience = 10 * min(10, int(log10(training_iter))) + 5
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.3)
-    mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model).to(device)
+    mll = gpytorch.mlls.ExactMarginalLogLikelihood(
+        likelihood, model
+    ).to(device)
     # scheduler = None
     # scheduler_class = torch.optim.lr_scheduler.OneCycleLR
     # scheduler = scheduler_class(optimizer, max_lr=0.4, total_steps=training_iter, anneal_strategy="linear")
@@ -129,10 +168,8 @@ def train_model_per_batch(
     for i in range(training_iter):
         optimizer.zero_grad()
         output = model(train_x)
-        loss = -mll(output, train_y).sum()
-
-        # print("\n\ntrain_x:", train_x, sep="\n", end="\n")
-        # print("\n\ntrain_y_each:", train_y_each, sep="\n", end="\n")
+        # print("Shapes during Training:", train_x.shape, output.mean.shape, train_y.shape, )
+        loss = -mll(output, train_y)
         
         if verbose and (i % 10 == 0 or i == training_iter-1):
             it = f"({i+1}/{training_iter})"
@@ -191,29 +228,32 @@ def train_model_per_batch(
 
 
 def train_model_gp_Kenny(
-        train_x, train_y, terms=4,
-        training_iter: int = 1000, verbose = False, normalize_y=True
+        train_x, train_y, terms=4, training_iter: int = 100, 
+        verbose = False, normalize_y=True, dims = 1
         ):
     """
     Trains separate GP models for the real and imaginary parts of complex data.
     """
 
+    if train_x.ndim == 1: train_x = train_x[:, None]
+    if train_y.ndim == 1: train_y = train_y[:, None]
+
     train_x_tensor = torch.tensor(
         train_x, dtype=torch.float64, requires_grad=True
-        ).view(-1,1).to(device)
+        ).to(device)
     train_y_tensor_r = torch.tensor(
         train_y.real, dtype=torch.float64, requires_grad=True
-        ).view(-1,1)
+        ).to(device)
     train_y_tensor_i = torch.tensor(
         train_y.imag, dtype=torch.float64, requires_grad=True
-        ).view(-1,1)
+        ).to(device)
 
     train_batch = [
         (train_x_tensor, train_y_tensor_r),
         (train_x_tensor, train_y_tensor_i),
     ]
 
-    args = (terms, training_iter, verbose, normalize_y)
+    args = (terms, training_iter, verbose, normalize_y, dims)
     model_r, model_i = [train_model_per_batch(*b, *args) for b in train_batch]
 
     return model_r, model_i

@@ -288,7 +288,7 @@ class DiagonalLocalFourier(KFunction):
         sin = torch.sin((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[0])/self.freqs
         cos = torch.cos((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[1])/self.freqs
         summed = (sin*amps[0] + cos*amps[1]).sum(dim=-1)
-        return torch.exp(-scale*summed)+1e-12
+        return torch.exp(-scale*summed)
 
 # \Sigma defined in Noack, 2022, Advanced Stationary...
 # def forward(self, x1: Tensor, x2: Tensor, kernel: Kernel, diag: bool = False) -> Tensor:
@@ -358,10 +358,7 @@ class StackedKernel(Kernel):
         return 0
 
     def forward(self, x1, x2, diag=False, **params):
-        if diag:
-            return sum(k(x1, x2, diag=True, **params) for k in self.kernels)
-        else:
-            return sum(k(x1, x2, diag=False, **params) for k in self.kernels)
+        return sum(k(x1, x2, diag=False, **params) for k in self.kernels)
 
 def get_kernel(sett: KernelSettings) -> _Kernel:
     name, nu, dims, terms = sett

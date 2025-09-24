@@ -49,7 +49,7 @@ class Tee(object):
 # -----------------------
 # Reduced Basis GP class
 # -----------------------
-class ReducedBasisGP:
+class ReducedBasisGPBASE:
     def __init__(
         self, solver, trainer, angles, n_init=6, r=3, adaptive_r=True, 
         acquisition_type=0, Xnormalizer_type=0, terms=1, 
@@ -167,6 +167,53 @@ class ReducedBasisGP:
         # Compute coefficients (project responses on modes)
         self.coeffs = self.U * self.S  # shape (n_freqs, r)
         return 0
+    
+    def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
+        """Pick frequency that maximizes integrated variance across coefficients"""
+
+        total_mu, total_var, f_domain = self._pred_gps(f_min, f_max, n_grid)
+        # print(np.array(preds))
+        
+        responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
+        loss_per_freq = np.mean(np.square(self.responses-responses_pred), axis=1)
+        self.fbest = total_mu[np.argmin(loss_per_freq)]
+
+        ac_vals = self.acquisition_function(total_mu, total_var)
+        idx = np.argmax(ac_vals)
+        f_domain = self.normalizerX.inverse_transform(f_domain)
+        for new_idx in np.flip(np.argsort(ac_vals)):
+            if f_domain[new_idx, 0] not in self.freqs:
+                idx = new_idx
+                break
+        denom = self.r
+
+        return f_domain[idx, 0], ac_vals[idx], np.sum(total_var)/denom
+    
+    def update(self, f_new):
+        y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
+        y_new = y_new.reshape(1, len(self.angles))[0]
+        self.freqs.append(f_new)
+        self.responses.append(y_new)
+        self._update_basis()
+        self._fit_gps()
+        return 0
+        
+    def _fit_gps(self):
+        raise NotImplementedError()
+
+    
+    def _pred_gps(self, f_min, f_max, n_grid):
+        raise NotImplementedError()
+
+        
+    def reconstruct(self, f_query_arr):
+        raise NotImplementedError()
+
+
+# -----------------------
+# Reduced Basis GP class with 2D kernel
+# -----------------------
+class ReducedBasisGP1D(ReducedBasisGPBASE):
         
     def _fit_gps(self):
         
@@ -201,36 +248,6 @@ class ReducedBasisGP:
             total_var += weight * (std_r**2 + std_i**2)
             # preds.append(weight * (mu_r**2 + mu_i**2))
         return total_mu, total_var, x_pred
-    
-    def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
-        """Pick frequency that maximizes integrated variance across coefficients"""
-
-        total_mu, total_var, f_domain = self._pred_gps(f_min, f_max, n_grid)
-        # print(np.array(preds))
-        
-        responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
-        loss_per_freq = np.mean(np.square(self.responses-responses_pred), axis=1)
-        self.fbest = total_mu[np.argmin(loss_per_freq)]
-
-        ac_vals = self.acquisition_function(total_mu, total_var)
-        idx = np.argmax(ac_vals)
-        f_domain = self.normalizerX.inverse_transform(f_domain)
-        for new_idx in np.flip(np.argsort(ac_vals)):
-            if f_domain[new_idx, 0] not in self.freqs:
-                idx = new_idx
-                break
-        denom = self.r/len(self.freqs)
-
-        return f_domain[idx, 0], ac_vals[idx], np.sum(total_var)/denom
-    
-    def update(self, f_new):
-        y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
-        y_new = y_new.reshape(1, len(self.angles))[0]
-        self.freqs.append(f_new)
-        self.responses.append(y_new)
-        self._update_basis()
-        self._fit_gps()
-        return 0
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""
@@ -250,7 +267,7 @@ class ReducedBasisGP:
 # -----------------------
 # Reduced Basis GP class with 2D kernel
 # -----------------------
-class ReducedBasisGP2D(ReducedBasisGP):
+class ReducedBasisGP2D(ReducedBasisGPBASE):
         
     def _fit_gps(self):
         "fit 2d data directly"
@@ -299,7 +316,7 @@ class ReducedBasisGP2D(ReducedBasisGP):
 # -----------------------
 # Reduced Basis multi-task GP class
 # -----------------------
-class ReducedBasisGPMultiTask(ReducedBasisGP):
+class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         
     def _fit_gps(self):
         "fit 2d data directly"

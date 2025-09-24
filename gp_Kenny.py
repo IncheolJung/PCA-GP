@@ -4,8 +4,8 @@ import warnings
 from gpytorch.utils.warnings import GPInputWarning
 from copy import deepcopy
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# device = 'cpu'
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu'
 
 
 class GPModel(gpytorch.models.ExactGP):
@@ -101,13 +101,13 @@ def train_model_per_batch(
         if (train_x.ndim==1 and train_y.ndim==2):
             train_x = train_x.view(-1, 1)
 
-    # print(f"Report from gp_Kenny.train_model_per_batch")
-    # print("Input shapes:", train_x.shape, train_y.shape)
+    print(f"Report from gp_Kenny.train_model_per_batch")
+    print("Input shapes:", train_x.shape, train_y.shape)
 
-    # kern_sett = KernelSettings("Stacked_RBFP", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
     # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
-    kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
     kernel = get_kernel(kern_sett).double().to(device)
     # kernel = gpytorch.kernels.ScaleKernel(
@@ -159,16 +159,17 @@ def train_model_per_batch(
     # scheduler = None
     # scheduler_class = torch.optim.lr_scheduler.OneCycleLR
     # scheduler = scheduler_class(optimizer, max_lr=0.4, total_steps=training_iter, anneal_strategy="linear")
-    scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
-    scheduler = scheduler_class(optimizer, T_max=training_iter)
-    # scheduler_class = torch.optim.lr_scheduler.ReduceLROnPlateau
-    # scheduler = scheduler_class(optimizer, patience=int(patience/4), factor=0.3)
+    # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
+    # scheduler = scheduler_class(optimizer, T_max=training_iter)
+    scheduler_class = torch.optim.lr_scheduler.ReduceLROnPlateau
+    scheduler = scheduler_class(optimizer, patience=int(patience/4), factor=0.3)
 
     best_loss = float("inf")
     patience_counter = 0
     for i in range(training_iter):
         optimizer.zero_grad()
-        output = model(train_x)
+        with gpytorch.settings.cholesky_jitter(1e-4):
+            output = model(train_x)
         # print("Shapes during Training:", train_x.shape, output.mean.shape, train_y.shape, )
         loss = -mll(output, train_y)
         
@@ -181,8 +182,8 @@ def train_model_per_batch(
 
         loss.backward()
         optimizer.step()
-        scheduler.step()
-        # scheduler.step(loss.item())     # for ReduceLROnPlateau
+        # scheduler.step()
+        scheduler.step(loss.item())     # for ReduceLROnPlateau
 
         # ---- Early stopping check ----
         if loss.item() < best_loss - 1e-6:  # tolerance to avoid floating point noise
@@ -206,10 +207,12 @@ def train_model_per_batch(
         print(end_phrase, flush=True, end='\033[K\r')
 
     # Fine-tuning
-    fine_tuning_iter = training_iter - i + 21
-    fine_tuning_lr   = 2*optimizer.param_groups[0]['lr']    # 2*last_lr
+    fine_tuning_iter = 50
+    # fine_tuning_iter = training_iter - i + 21
+    # fine_tuning_lr   = 2*optimizer.param_groups[0]['lr']    # 2*last_lr
+    fine_tuning_lr   = 0.01
     # end_phrase = f"Training.... "
-    # finetuner = torch.optim.Rprop(model.parameters(), lr=0.01)
+    # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
     finetuner = torch.optim.LBFGS(
         model.parameters(), lr=fine_tuning_lr, 
         max_iter=fine_tuning_iter,

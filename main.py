@@ -88,7 +88,7 @@ def main():
 
 
     # -----------------------
-    # GP MODEL
+    # GP TRAINER
     # -----------------------
     # from gp_sklearn import train_gp_sklearn as trainer
     from gp_Kenny import train_model_gp_Kenny as trainer
@@ -97,9 +97,9 @@ def main():
     # -----------------------
     # GP MODEL
     # -----------------------
-    # model = ReducedBasisGP
+    model = ReducedBasisGP1D
     # model = ReducedBasisGP2D
-    model = ReducedBasisGPMultiTask
+    # model = ReducedBasisGPMultiTask
 
     # -----------------------
     # OUTPUT DRIECTORY SETUP

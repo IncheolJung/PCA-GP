@@ -157,10 +157,11 @@ class ReducedBasisGPBASE:
                 r += 1
                 e = (sr/S[0])**2
                 if (e<(eps**2)): break
+            r += 1
             if self.verbose:
                 print(f"number of basis updated: {self.r} -> {r}")
-                print("S[0, r] = ", S[0], S[r])
-                if (r+1)<len(S): print("S[r+1] =", S[r+1])
+                print("S[0, r-1] = ", S[0], S[r-1])
+                if (r)<len(S): print("S[r] =", S[r])
             self.r = r
         # Keep first r modes
         self.U, self.S, self.Vh = U[:, :self.r], S[:self.r], Vh[:self.r, :]
@@ -211,7 +212,7 @@ class ReducedBasisGPBASE:
 
 
 # -----------------------
-# Reduced Basis GP class with 2D kernel
+# Reduced Basis GP class with 1D kernel
 # -----------------------
 class ReducedBasisGP1D(ReducedBasisGPBASE):
         
@@ -225,7 +226,7 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             # Separate real and imaginary parts
             y_train = self.coeffs[:, i][:, None]
             gp_r, gp_i = self.train_gp(
-                x_train, y_train, terms=self.terms, training_iter=1000, 
+                x_train, y_train, terms=self.terms, training_iter=500, 
                 verbose=self.verbose, normalize_y=self.normalizeY,
                 dims = x_train.shape[-1]
                 )
@@ -326,7 +327,8 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         y_train = self.coeffs
 
         gp_r, gp_i = self.train_gp(
-            x_train, y_train, terms=self.terms, training_iter=1000, 
+            x_train, y_train, terms=self.terms, 
+            training_iter=500*self.r, 
             verbose=self.verbose, normalize_y=self.normalizeY, 
             dims = x_train.shape[-1]
             )

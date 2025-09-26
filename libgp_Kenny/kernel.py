@@ -79,21 +79,23 @@ class NSMKernel:
             self.nu = nu
             super(name, self).__init__(**kwargs)
 
+            init_std_func = 0.7
             for param, info in self.std_func.parameters().items():
                 shape, constraint = info
                 if param in std_constraints: constraint = std_constraints[param]
                 self.register_parameter(
                     name=f"raw_std_{param}",
-                    parameter=torch.nn.Parameter(torch.zeros(*(self.batch_shape + shape), dtype=torch.float64))
+                    parameter=torch.nn.Parameter(init_std_func*torch.ones(*(self.batch_shape + shape), dtype=torch.float64))
                 )
                 self.register_constraint(f"raw_std_{param}", constraint)
 
+            init_covar_func = 0.3
             for param, info in self.covar_func.parameters().items():
                 shape, constraint = info
                 if param in covar_constraints: constraint = covar_constraints[param]
                 self.register_parameter(
                     name=f"raw_covar_{param}",
-                    parameter=torch.nn.Parameter(torch.zeros(*(self.batch_shape + shape), dtype=torch.float64))
+                    parameter=torch.nn.Parameter(init_covar_func*torch.ones(*(self.batch_shape + shape), dtype=torch.float64))
                 )
                 self.register_constraint(f"raw_covar_{param}", constraint)
 
@@ -339,7 +341,9 @@ class StackedKernel(Kernel):
 
     def __init__(self, kern_sett: KernelSettings, *args, **kwargs) -> None:
         name, nu, dims, terms = kern_sett
-        super(StackedKernel, self).__init__(*args, active_dims=dims, **kwargs)
+        # active_dims = list(range(dims))
+        # print("active_dims given to super():", active_dims)
+        super(StackedKernel, self).__init__(*args, active_dims=None, **kwargs)
         kern_sett = name.replace("Stacked_",""), nu, dims, 1
         self.kernels = torch.nn.ModuleList([get_kernel(kern_sett) for _ in range(terms)])
         return None
@@ -362,6 +366,7 @@ class StackedKernel(Kernel):
 
 def get_kernel(sett: KernelSettings) -> _Kernel:
     name, nu, dims, terms = sett
+    # active_dims = list(range(dims))
     match name:
         case "RBF": return ScaleKernel(RBFKernel(ard_num_dims=dims))
         case "RBFP": return ScaleKernel(RBFKernel(ard_num_dims=dims)) * PeriodicKernel(ard_num_dims=dims)

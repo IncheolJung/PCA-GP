@@ -37,7 +37,6 @@ class fileIOdatareader:
         return self._y
 
     def _read_data_kenny_format(self, file: str):
-        print(type(file))
         if isinstance(file, Path): file = file.name
         if   file == "data/data-for-kenny-paper-HH.npz": 
             re_key, im_key = 'Cpol(re)(90.0)', 'Cpol(im)(90.0)'

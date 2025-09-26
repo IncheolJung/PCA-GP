@@ -97,9 +97,9 @@ def main():
     # -----------------------
     # GP MODEL
     # -----------------------
-    model = ReducedBasisGP1D
+    # model = ReducedBasisGP1D
     # model = ReducedBasisGP2D
-    # model = ReducedBasisGPMultiTask
+    model = ReducedBasisGPMultiTask
 
     # -----------------------
     # OUTPUT DRIECTORY SETUP

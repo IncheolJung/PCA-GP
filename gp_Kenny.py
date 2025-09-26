@@ -255,7 +255,7 @@ def train_model_per_batch(
         it = f"({i+1}/{training_iter})"
         lr = f"LR: {scheduler.get_last_lr()[0]:.4f}"
         # lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
-        cost = f"loss: {loss:.4f}  noise: [{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}]"
+        cost = f"loss: {loss:.4f}{tab}noise: [{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}]"
         end_phrase = f".....Finish! {it}{tab}{lr}{tab}{cost}{tab}"
         print(end_phrase, flush=True, end='\033[K\r')
 

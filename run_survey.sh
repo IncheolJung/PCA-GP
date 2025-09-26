@@ -1,5 +1,6 @@
 EXE=main.py
 LOG_DIR=LOGS
+MEMLOG=mem-time.log
 
 # if directory exists, empty it
 if [ -d "$LOG_DIR" ]; then
@@ -14,8 +15,12 @@ for term in 5; do
       for trial in {1..1}; do
         LOG=compute$((i+j+trial)).log
         # grid sampling for variance calc
-        python $EXE -a $i -x $j -s 0 -t $term | tee $LOG
+        PARMS="-a $i -x $j -s 0 -t $term"
+        # python $EXE $PARMS | tee $LOG
+        { /bin/time -v -o $MEMLOG python $EXE $PARMS; } 2>&1 | tee $LOG
+        cat $MEMLOG >> $LOG
         mv $LOG $LOG_DIR
+        rm $MEMLOG
         echo $'\n\n'
       done
     done

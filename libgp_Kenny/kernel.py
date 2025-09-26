@@ -9,6 +9,35 @@ from gpytorch.kernels import Kernel, ScaleKernel, RBFKernel, RFFKernel, MaternKe
 
 from .tools import Array, Tensor
 
+class PhaseConstraint(Interval):
+
+    def __init__(
+        self, lower_bound=-torch.pi, upper_bound=torch.pi, 
+        transform=None, inv_transform=None, initial_value=None
+    ):
+        if transform is None: transform = lambda x: x
+        if inv_transform is None: inv_transform = lambda x: x
+        self.lb, self.ub = lower_bound, upper_bound
+        self.range = upper_bound - lower_bound
+        assert(self.range > 0)  # upper_bound > lower_bound
+        super().__init__(
+            lower_bound=-math.inf,
+            upper_bound=math.inf,
+            transform=transform,
+            inv_transform=inv_transform,
+            initial_value=initial_value,
+        )
+
+    def transform(self, x):
+        return (x - self.lb) % (self.range) + self.lb
+
+    def inverse_transform(self, y):
+        return y   # identity if you just want wrapping
+
+    def check(self, y):
+        return torch.isfinite(y)
+
+
 KernelSettings = namedtuple("KernelSettings", "name nu dims terms", defaults=(None,))
 class KFunction(ABC):
     """An abstract class that represents a function to be used for constructing kernels.
@@ -247,7 +276,9 @@ class LocalFourier(KFunction):
     def parameters(self):
         return {
             "amps": ((2, self.normalize - 1,), Positive()),
-            "phases": ((2, self.normalize - 1,), Interval(-3.0*torch.pi, 3.0*torch.pi)),
+            # "phases": ((2, self.normalize - 1,), Interval(-1.5*torch.pi, 1.5*torch.pi)),  # org
+            "phases": ((2, self.normalize - 1,), Interval(-744, 709)),    # roughly numerical limits for exp
+            # "phases": ((2, self.normalize - 1,), PhaseConstraint(-10*torch.pi, 10*torch.pi)),  # custom phase constraint
             "period": ((1,), Positive()),
             "scale": ((1,), Positive())
         }
@@ -256,6 +287,7 @@ class LocalFourier(KFunction):
         amps, phases, period, scale = kernel.std_amps, kernel.std_phases, \
                                         kernel.std_period, kernel.std_scale
 
+        # phases = torch.angle(torch.exp(1j*phases))  # wrap phase
         dims = (torch.arange(self.freqs, dtype=x.dtype,  device=x.device),)*x.shape[-1]
         freqs = torch.cartesian_prod(*dims)[1:].view(-1, x.shape[-1]).transpose(-1, -2) # Skip zero.
         # normalize = self.freqs**self.ard_num_dims
@@ -266,6 +298,7 @@ class LocalFourier(KFunction):
         sin = torch.sin(torch.pi * torch.matmul(x, freqs)/period + phases[0])/normalize
         cos = torch.cos(torch.pi * torch.matmul(x, freqs)/period + phases[1])/normalize
         summed = torch.matmul(sin, amps[0]) + torch.matmul(cos, amps[1])
+        # kernel.covar_phases = torch.angle(torch.exp(1j*kernel.covar_phases))  # wrap phase
         return torch.exp(-scale*summed)
 
 class DiagonalLocalFourier(KFunction):
@@ -277,7 +310,9 @@ class DiagonalLocalFourier(KFunction):
     def parameters(self):
         return {
             "amps": ((2, 1, self.ard_num_dims, self.freqs,), Positive()),
-            "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-3.0*torch.pi, 3.0*torch.pi)),
+            # "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-1.5*torch.pi, 1.5*torch.pi)),    # org
+            "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-744, 709)),  # roughly numerical limits for exp
+            # "phases": ((2, 1, self.ard_num_dims, self.freqs,), PhaseConstraint(-10*torch.pi, 10*torch.pi)),  # custom phase constraint
             "period": ((self.ard_num_dims, 1), Positive()),
             "scale": ((1,), Positive())
         }
@@ -285,11 +320,13 @@ class DiagonalLocalFourier(KFunction):
     def forward(self, x: Tensor, kernel: Kernel) -> Tensor:
         amps, phases, period, scale = kernel.covar_amps, kernel.covar_phases, \
                                         kernel.covar_period, kernel.covar_scale
-
+        
+        # phases = torch.angle(torch.exp(1j*phases))  # wrap phase
         freqs = torch.arange(1, self.freqs+1, device=x.device, dtype=x.dtype).unsqueeze(-2)
         sin = torch.sin((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[0])/self.freqs
         cos = torch.cos((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[1])/self.freqs
         summed = (sin*amps[0] + cos*amps[1]).sum(dim=-1)
+        # kernel.covar_phases = torch.angle(torch.exp(1j*kernel.covar_phases))  # wrap phase
         return torch.exp(-scale*summed)
 
 # \Sigma defined in Noack, 2022, Advanced Stationary...

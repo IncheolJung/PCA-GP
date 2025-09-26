@@ -111,8 +111,8 @@ def train_model_per_batch(
     # print("Input shapes:", train_x.shape, train_y.shape)
 
     # kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
-    kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
     kernel = get_kernel(kern_sett).double().to(device)

@@ -97,6 +97,7 @@ class ReducedBasisGPBASE:
             return self.initialize(f_min, f_max, 0)
         
         f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
+        # f_init = self.sampler(f_min, f_max, self.n_init).squeeze(-1)
         self.freqs = list(f_init)
         Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
         # Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)

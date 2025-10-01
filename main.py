@@ -176,7 +176,9 @@ def main():
     terms  = int(config.t)
     max_iter = int(config.i)
     tol = float(config.tol)
-    angles = np.linspace(*map(int, config.angle))  # 181 angles
+    f_min, f_max, f_num = *map(float, config.freq[:2]), int(config.freq[2])
+    a_min, a_max, a_num = *map(float, config.angle[:2]), int(config.angle[2])
+    angles = np.linspace(a_min, a_max, a_num)  # 181 angles
 
     # -----------------------
     # SOLVER
@@ -252,13 +254,12 @@ def main():
     print(f"  >> terms: {terms}")
     print(f"  >> max_iter: {max_iter}")
     print(f"  >> tol: {tol}")
-    print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {config.angle}")
+    print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {a_min, a_max, a_num}")
     print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
     stdout.flush()
     # -----------------------
     # BEGIN
     # -----------------------
-    f_min, f_max, f_num = *map(float, config.freq[:2]), int(config.freq[2])
     # f_min, f_max, f_num = 100, 300, 101
     # f_min, f_max, f_num = 9500, 10500, 101
     # f_min, f_max, f_num = 500, 1500, 151

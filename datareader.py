@@ -285,8 +285,9 @@ class OnFlySolver:
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
         if len(farfield_data) != len(self.phi): 
-            raise RuntimeError("data unmatched with queried angle: \n\t"
-                               f"datasize {len(farfield_data)} != request {len(self.phi)}")
+            raise RuntimeError("data unmatched with queried angle:\n"
+                               f"datasize {len(farfield_data)} != request {len(self.phi)}\n"
+                               f"at frequency {freq}")
         for d in farfield_data:
             theta, phi, cpol_re, cpol_im, xpol_re, xpol_im = map(float, d.strip("\n").split())
             if self.sweep_angle_type==0:    # phi-sweep

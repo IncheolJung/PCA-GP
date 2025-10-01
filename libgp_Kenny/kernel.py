@@ -275,18 +275,22 @@ class LocalFourier(KFunction):
 
     def parameters(self):
         return {
-            "amps": ((2, self.normalize - 1,), Positive()),
+            # "amps": ((2, self.normalize - 1,), Positive()),
+            "amps": ((2, self.normalize - 1,), Interval(0.0, 50.0)),
             # "phases": ((2, self.normalize - 1,), Interval(-1.5*torch.pi, 1.5*torch.pi)),  # org
-            "phases": ((2, self.normalize - 1,), Interval(-744, 709)),    # roughly numerical limits for exp
-            # "phases": ((2, self.normalize - 1,), PhaseConstraint(-10*torch.pi, 10*torch.pi)),  # custom phase constraint
-            "period": ((1,), Positive()),
-            "scale": ((1,), Positive())
+            # "phases": ((2, self.normalize - 1,), Interval(-744, 709)),    # roughly numerical limits for exp
+            "phases": ((2, self.normalize - 1,), PhaseConstraint(-torch.pi, torch.pi)),  # custom phase constraint
+            "period": ((1,), Positive(transform=torch.exp, inv_transform=torch.log)),
+            "scale": ((1,), Positive(transform=torch.exp, inv_transform=torch.log)),
+            "variance": ((1,), Positive(transform=torch.exp, inv_transform=torch.log)),
         }
 
     def forward(self, x: Tensor, kernel: Kernel) -> Tensor:
         amps, phases, period, scale = kernel.std_amps, kernel.std_phases, \
                                         kernel.std_period, kernel.std_scale
+        variance = kernel.std_variance
 
+        phases /= 100    # make phase less sensitive
         # phases = torch.angle(torch.exp(1j*phases))  # wrap phase
         dims = (torch.arange(self.freqs, dtype=x.dtype,  device=x.device),)*x.shape[-1]
         freqs = torch.cartesian_prod(*dims)[1:].view(-1, x.shape[-1]).transpose(-1, -2) # Skip zero.
@@ -298,8 +302,11 @@ class LocalFourier(KFunction):
         sin = torch.sin(torch.pi * torch.matmul(x, freqs)/period + phases[0])/normalize
         cos = torch.cos(torch.pi * torch.matmul(x, freqs)/period + phases[1])/normalize
         summed = torch.matmul(sin, amps[0]) + torch.matmul(cos, amps[1])
+        # summed /= 2*len(freqs)
         # kernel.covar_phases = torch.angle(torch.exp(1j*kernel.covar_phases))  # wrap phase
-        return torch.exp(-scale*summed)
+        arg = -scale * torch.relu(summed)
+        arg = torch.clamp(arg, min=-30.0, max=30.0)  # prevents overflow
+        return variance * torch.exp(arg)
 
 class DiagonalLocalFourier(KFunction):
     """A standard deviation estimator based on squared cosine terms."""
@@ -309,25 +316,31 @@ class DiagonalLocalFourier(KFunction):
 
     def parameters(self):
         return {
-            "amps": ((2, 1, self.ard_num_dims, self.freqs,), Positive()),
+            # "amps": ((2, 1, self.ard_num_dims, self.freqs,), Positive()),
+            "amps": ((2, 1, self.ard_num_dims, self.freqs,), Interval(0.0, 5.0)),
             # "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-1.5*torch.pi, 1.5*torch.pi)),    # org
-            "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-744, 709)),  # roughly numerical limits for exp
-            # "phases": ((2, 1, self.ard_num_dims, self.freqs,), PhaseConstraint(-10*torch.pi, 10*torch.pi)),  # custom phase constraint
-            "period": ((self.ard_num_dims, 1), Positive()),
-            "scale": ((1,), Positive())
+            # "phases": ((2, 1, self.ard_num_dims, self.freqs,), Interval(-744, 709)),  # roughly numerical limits for exp
+            "phases": ((2, 1, self.ard_num_dims, self.freqs,), PhaseConstraint(-10*torch.pi, 10*torch.pi)),  # custom phase constraint
+            "period": ((self.ard_num_dims, 1), Positive(transform=torch.exp, inv_transform=torch.log)),
+            "scale": ((1,), Positive(transform=torch.exp, inv_transform=torch.log)),
+            "variance": ((1,), Positive(transform=torch.exp, inv_transform=torch.log)),
         }
 
     def forward(self, x: Tensor, kernel: Kernel) -> Tensor:
         amps, phases, period, scale = kernel.covar_amps, kernel.covar_phases, \
                                         kernel.covar_period, kernel.covar_scale
+        variance = kernel.std_variance
         
+        phases /= 100    # make phase less sensitive
         # phases = torch.angle(torch.exp(1j*phases))  # wrap phase
         freqs = torch.arange(1, self.freqs+1, device=x.device, dtype=x.dtype).unsqueeze(-2)
         sin = torch.sin((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[0])/self.freqs
         cos = torch.cos((torch.pi/period) * (x.unsqueeze(-1) * freqs) + phases[1])/self.freqs
         summed = (sin*amps[0] + cos*amps[1]).sum(dim=-1)
         # kernel.covar_phases = torch.angle(torch.exp(1j*kernel.covar_phases))  # wrap phase
-        return torch.exp(-scale*summed)
+        arg = -scale * torch.relu(summed)
+        arg = torch.clamp(arg, min=-30.0, max=30.0)  # prevents overflow
+        return variance * torch.exp(arg)
 
 # \Sigma defined in Noack, 2022, Advanced Stationary...
 # def forward(self, x1: Tensor, x2: Tensor, kernel: Kernel, diag: bool = False) -> Tensor:

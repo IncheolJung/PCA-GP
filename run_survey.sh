@@ -9,7 +9,7 @@ else
   mkdir -p "$LOG_DIR"
 fi
 
-for term in 5; do
+for term in 3; do
   for i in {0..2}; do
     for j in {1..5}; do
       for trial in {1..1}; do

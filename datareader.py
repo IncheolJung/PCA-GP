@@ -5,6 +5,7 @@ from scipy.spatial import cKDTree
 from typing import Iterable
 from itertools import product
 from joblib import Parallel, delayed
+import time
 
 
 class fileIOdatareader:
@@ -25,7 +26,21 @@ class fileIOdatareader:
         return None
     
     def __call__(self, freq, angle):
-        _, idx = self._tree.query((freq, angle))
+        if isinstance(freq, Iterable):
+            return np.array([self.__call__(f, angle) for f in freq])
+            # results = Parallel(n_jobs=4, prefer="threads")(
+            #     delayed(self.__call__)(f, angle, delay=0.01*i) 
+            #     for i, f in enumerate(freq)
+            # )
+            # return np.array(list(results))
+        if isinstance(angle, Iterable):
+            return np.array([self.__call__(freq, a) for a in angle])
+            # return Parallel(n_jobs=4, prefer="threads")(
+            #     delayed(self.__call__)(freq, a) for a in angle
+            # )
+            # return np.array(list(results))
+        else:
+            _, idx = self._tree.query((freq, angle))
         return self.y[idx]
     
     @property
@@ -52,6 +67,8 @@ class fileIOdatareader:
         coords = np.stack([_M, _P], axis=-1)           # shape: (101, 181, 2)
         self._x = coords.reshape(-1, 2)
         self._y = complex_data.reshape(-1)
+        self.phi = phi
+        self.theta = np.full_like(phi, fill_value=90)
         return 0
 
 
@@ -60,17 +77,36 @@ class OnFlySolver:
     def __init__(
             self, 
             workingpath: str, 
-            model_name: str, 
+            model_name: str = None, 
             init_freqs: list = [], 
             angles = np.linspace(0, 180, 181),
+            sweep_angle_type = 0,
             precision: int = 3
             ):
+        "sweep_angle_type: [0, 1] = [phi, theta]"
         self.workingpath = Path(workingpath).absolute().__str__()
+        if model_name is None:
+            glob_domain_file = list(Path(workingpath).glob("*.domain"))
+            if len(glob_domain_file) == 1:
+                model_name = glob_domain_file[0].stem
+            else:
+                raise RuntimeError(
+                    "One .domain file needs to exist "
+                    f"under {self.workingpath}. "
+                    f"Found {len(glob_domain_file)}."
+                )
         self.model_name = model_name
         self.in_file = Path(f"{model_name}.in")
         self.solver = Path("./data/VWT-data/VWT-IE-Solver-Unified-DG.x").absolute().__str__()
         self.freqs = init_freqs
-        self.phi = np.array(angles)
+        self.sweep_angle_type = sweep_angle_type
+        if sweep_angle_type==0:     # phi-sweep
+            self.phi = np.array(angles)
+            self.theta = 90*np.ones(len(angles))
+        elif sweep_angle_type==1:   # theta-sweep
+            self.phi = np.zeros(len(angles))
+            self.theta = np.array(angles)
+        else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
         self.n_angles = len(angles)
         self.encoder = lambda x: round(float(x), precision)
         self.farfields = {}         # keys: (freq, angle), values: (cpol, xpol)
@@ -79,18 +115,20 @@ class OnFlySolver:
 
         # if len(self.freqs) > 0:
         #     if len(self.freqs) > 1: # parallel if multiple freq
+        #         print("Now using Parallel solver")
         #         _run_one = lambda f: self.run(f)
         #         freq_to_run = []
         #         for freq in self.freqs:
         #             if (self._is_data_exist(freq)): pass
         #             else: freq_to_run.append(freq)
-        #         results = Parallel(n_jobs=4)(  # use 4 cores
+        #         results = Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
         #             delayed(_run_one)(f) for f in range(freq_to_run)
         #         )
         #         broken_runs = {i: r for i,r in enumerate(results) if r != 0}
         #         if len(broken_runs): 
         #             raise RuntimeError(f"Simulations broken: {broken_runs}")
         #     else:       # sequential if one freq
+        #         print("Now using sequential solver")
         #         for freq in self.freqs:
         #             self.__call__(freq, self.phi[0])
 
@@ -120,22 +158,40 @@ class OnFlySolver:
 
         return None
     
-    def __call__(self, freq, angle):
-        freq, angle = self.encoder(freq), self.encoder(angle)
-        if (self._is_data_exist(freq)): pass
-        else: 
-            exit = self.run(freq)
-            if exit != 0:
-                raise RuntimeError(f"simulation error exit {exit}")
-        # if ((freq, angle) not in self.farfields.keys()) :
-        #     print(f"warning: (freq, angle) = ({freq}, {angle}) not found in self.farfields.keys()")
-        #     print("type(freq):", type(freq))
-        #     print("type(angle):", type(angle))
-        #     freq_key, angle_key = list(self.farfields.keys())[0]
-        #     print(f"(freq_key, angle_key) = ({freq_key}, {angle_key})")
-        #     print("type(freq_key):", type(freq_key))
-        #     print("type(angle_key):", type(angle_key))
-        #     self.run(freq)
+    def __call__(self, freq, angle, delay=0):
+        # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
+        #             delayed(_run_one)(f) for f in range(freq_to_run)
+        #         )
+        time.sleep(delay)
+        if isinstance(freq, Iterable):
+            # return [self.__call__(f, angle) for f in freq]
+            results = Parallel(n_jobs=4, prefer="threads")(
+                delayed(self.__call__)(f, angle, delay=0.01*i) 
+                for i, f in enumerate(freq)
+            )
+            return np.array(list(results))
+        if isinstance(angle, Iterable):
+            results = [self.__call__(freq, a) for a in angle]
+            # return Parallel(n_jobs=4, prefer="threads")(
+            #     delayed(self.__call__)(freq, a) for a in angle
+            # )
+            return np.array(results)
+        else:
+            freq, angle = self.encoder(freq), self.encoder(angle)
+            if (self._is_data_exist(freq)): pass
+            else: 
+                exit = self.run(freq)
+                if exit != 0:
+                    raise RuntimeError(f"simulation error exit {exit}")
+            # if ((freq, angle) not in self.farfields.keys()) :
+            #     print(f"warning: (freq, angle) = ({freq}, {angle}) not found in self.farfields.keys()")
+            #     print("type(freq):", type(freq))
+            #     print("type(angle):", type(angle))
+            #     freq_key, angle_key = list(self.farfields.keys())[0]
+            #     print(f"(freq_key, angle_key) = ({freq_key}, {angle_key})")
+            #     print("type(freq_key):", type(freq_key))
+            #     print("type(angle_key):", type(angle_key))
+            #     self.run(freq)
         return self.farfields[(freq, angle)][0]     # self.farfields[(freq, angle)] = (cpol, xpol)
     
     def _is_data_exist(self, freq_query):
@@ -150,10 +206,10 @@ class OnFlySolver:
         in_data = self.in_file.open('r').readlines()[:2]
         n_angles, freq, loss_c, precond_mode, skeleton_c = in_data[1].split()
         in_data[1] = " ".join([str(self.n_angles), str(freq_query), loss_c, precond_mode, skeleton_c, "\n"])
-        theta, Einc_mag, Einc_phase, Pol_angle, outCurJ = "90", "1", "0", "0", "0"
+        Einc_mag, Einc_phase, Pol_angle, outCurJ = "1", "0", "0", "0"
         inc_E_data = [Einc_mag, Einc_phase, Pol_angle, outCurJ, "\n"]
-        for i, phi in enumerate(self.phi):
-            in_data.append(" ".join([str(i+1), theta, str(phi), *inc_E_data]))
+        for i, (theta, phi) in enumerate(zip(self.theta, self.phi)):
+            in_data.append(" ".join([str(i+1), str(theta), str(phi), *inc_E_data]))
         self.in_file.open('w').write("".join(in_data))
         os.chdir(org_path)
         return 0
@@ -161,8 +217,16 @@ class OnFlySolver:
     def _setup_in_file(self, freq_query):
         "assume in self.workingpath && setup .in"
         in_data = self.in_file.open('r').readlines()
+        if len(in_data) <= 1:
+            raise ValueError(
+                f"_setup_in_file expected at least 2 lines, "
+                f"but got {len(in_data)}. freq_query={freq_query}, in_data={in_data}"
+            )
         n_angles, freq, loss_c, precond_mode, skeleton_c = in_data[1].split()
-        in_data[1] = " ".join([str(self.n_angles), str(freq_query), loss_c, precond_mode, skeleton_c, "\n"])
+        in_data[1] = " ".join([
+            str(self.n_angles), str(freq_query), loss_c, 
+            precond_mode, skeleton_c, "\n"
+            ])
         self.in_file.open('w').write("".join(in_data))
         return 0
     
@@ -199,7 +263,19 @@ class OnFlySolver:
         from_dir = Path(from_dir)
         to_dir   = Path(to_dir)
         to_dir.mkdir(parents=True, exist_ok=True)
-        for f in from_dir.glob(f"{self.model_name}*.*"):
+        files_to_move = list(from_dir.glob(f"{self.model_name}*.*"))
+        domain_file = from_dir/f"{self.model_name}.domain"
+        if domain_file in files_to_move:    # when DDsetup cp all subdomains
+            domain_data = [line.strip() for line in domain_file.open('r').readlines()]
+            n_subdomains = domain_data[1]
+            for subd in domain_data[3:]:
+                try: 
+                    number, subd_name = subd.split("\t")
+                except ValueError:
+                    number, subd_name = subd.split()
+                files_to_move.append((from_dir/subd_name).with_suffix(".tri"))
+                files_to_move.append((from_dir/subd_name).with_suffix(".rgmatflg"))
+        for f in files_to_move:
             if f.is_file():
                 shutil.copy2(f, to_dir / f.name)
         return 0
@@ -213,7 +289,12 @@ class OnFlySolver:
                                f"datasize {len(farfield_data)} != request {len(self.phi)}")
         for d in farfield_data:
             theta, phi, cpol_re, cpol_im, xpol_re, xpol_im = map(float, d.strip("\n").split())
-            self.farfields[(freq, self.encoder(phi))] = (cpol_re+1j*cpol_im, xpol_re+1j*xpol_im)
+            if self.sweep_angle_type==0:    # phi-sweep
+                angle = self.encoder(phi)
+            elif self.sweep_angle_type==1:  # theta-sweep
+                angle = self.encoder(theta)
+            else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
+            self.farfields[(freq, angle)] = (cpol_re+1j*cpol_im, xpol_re+1j*xpol_im)
         self.freqs.append(freq)
         return 0
     
@@ -223,8 +304,8 @@ class OnFlySolver:
         freq_query = self.encoder(freq_query)
         org_path = os.getcwd()
         os.chdir(self.workingpath)
-        self._setup_in_file(freq_query)
         self._setup_simulation(freq_query)
+        self._setup_in_file(freq_query)
         log_file_path = f"{self.model_name}.log"
         log_monitor_path = f"{self.workingpath}/compute.log"
 

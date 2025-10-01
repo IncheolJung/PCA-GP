@@ -9,6 +9,8 @@ from sklearn.preprocessing import (
 )
 from sklearn.pipeline import Pipeline
 
+from typing import Iterable
+
 from itertools import product
 from acquisitionfunctions import *
 
@@ -96,8 +98,8 @@ class ReducedBasisGPBASE:
         
         f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
         self.freqs = list(f_init)
-        # Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
-        Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)
+        Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
+        # Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)
         # self.fbest = np.mean(Y)
         Y = Y.reshape(self.n_init, len(self.angles))  # (n_init, n_angles)
         self.responses = list(Y) # store each freq response (complex vector)
@@ -169,7 +171,7 @@ class ReducedBasisGPBASE:
         self.coeffs = self.U * self.S  # shape (n_freqs, r)
         return 0
     
-    def acquisition_next_frequency(self, f_min, f_max, n_grid=101):
+    def acquisition_next_frequency(self, f_min, f_max, n_grid=101, n_new_samples=1):
         """Pick frequency that maximizes integrated variance across coefficients"""
 
         total_mu, total_var, f_domain = self._pred_gps(f_min, f_max, n_grid)
@@ -180,17 +182,28 @@ class ReducedBasisGPBASE:
         self.fbest = total_mu[np.argmin(loss_per_freq)]
 
         ac_vals = self.acquisition_function(total_mu, total_var)
-        idx = np.argmax(ac_vals)
+        # idx = np.argmax(ac_vals)
+        new_freq_out, ac_vals_out = [], []
         f_domain = self.normalizerX.inverse_transform(f_domain)
-        for new_idx in np.flip(np.argsort(ac_vals)):
-            if f_domain[new_idx, 0] not in self.freqs:
-                idx = new_idx
-                break
+        # for new_idx in np.flip(np.argsort(ac_vals)):
+        #     if f_domain[new_idx, 0] not in self.freqs:
+        #         new_freq_out.append(f_domain[new_idx, 0])
+        #         ac_vals_out.append(ac_vals[new_idx])
+        #         if len(new_freq_out) >= n_new_samples: 
+        #             break
+        sorted_idx = np.argsort(ac_vals)[::-1]
+        mask = ~np.isin(f_domain[sorted_idx, 0], self.freqs)
+        chosen_idx = sorted_idx[mask][:n_new_samples]
+        new_freq_out = f_domain[chosen_idx, 0].tolist()
+        ac_vals_out = ac_vals[chosen_idx].tolist()
+
         denom = self.r
 
-        return f_domain[idx, 0], ac_vals[idx], np.sum(total_var)/denom
+        return new_freq_out, ac_vals_out, np.sum(total_var)/denom
     
     def update(self, f_new):
+        if isinstance(f_new, Iterable): 
+            return sum([self.update(f) for f in f_new])
         y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
         y_new = y_new.reshape(1, len(self.angles))[0]
         self.freqs.append(f_new)
@@ -226,7 +239,7 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             # Separate real and imaginary parts
             y_train = self.coeffs[:, i][:, None]
             gp_r, gp_i = self.train_gp(
-                x_train, y_train, terms=self.terms, training_iter=500, 
+                x_train, y_train, terms=self.terms, training_iter=1000, 
                 verbose=self.verbose, normalize_y=self.normalizeY,
                 dims = x_train.shape[-1]
                 )
@@ -328,7 +341,7 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
 
         gp_r, gp_i = self.train_gp(
             x_train, y_train, terms=self.terms, 
-            training_iter=500*self.r, 
+            training_iter=200*self.r, 
             verbose=self.verbose, normalize_y=self.normalizeY, 
             dims = x_train.shape[-1]
             )

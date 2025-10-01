@@ -2,6 +2,8 @@ import sys
 import warnings
 import numpy as np
 
+from itertools import product
+
 from datareader import *
 from ReducedBasisGP import *
 
@@ -18,22 +20,50 @@ def configuration():
     sampling_types = [
         "grid", "latin-hyper-cube"
         ]
+    sweeping_types = [
+        "phi", "theta"
+        ]
     parser = ArgumentParser()
     parser.add_argument(
-        "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", default="0", 
-        help=f"type of acquisition function [{ac_fx_types}]")
+        "-p", "--path-simulation", dest="path", default=None, 
+        help=f"User defined simulation directory")
     parser.add_argument(
-        "-x", "--xn", "--X-normalizer", dest="xn", default="2", 
-        help=f"type of X-normalizer [{xnorm_types}]")
+        "-m", "--model-name", dest="model", default=None, 
+        help=f"model name (stem of .domain file) to simulate")
+    parser.add_argument(
+        "-A", "--angle", "--angle-settings", nargs=3, 
+        default=["0", "180", "181"], 
+        help=f"[start, end, number] of the angular sweep")
+    parser.add_argument(
+        "-S", "--ast", "--angular-sweep-type", default="0", 
+        help=f"type of angular sweep {sweeping_types}")
+    parser.add_argument(
+        "-F", "--freq", "--frequency-settings", nargs=3, 
+        default=["100", "300", "101"], 
+        help=f"[start, end, number] of the frequency sweep")
+    parser.add_argument(
+        "-v", "--validate", action="store_true", 
+        help=f"flag for validation")
+    parser.add_argument(
+        "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", 
+        default="0", 
+        help=f"type of acquisition function {ac_fx_types}")
+    parser.add_argument(
+        "-x", "--xn", "--X-normalizer", dest="xn", default="1", 
+        help=f"type of X-normalizer {xnorm_types}")
     parser.add_argument(
         "-n", "--n-init", dest="n", default="3", 
         help=f"initial number of frequency samples")
     parser.add_argument(
+        "--add", "--freq-add", default="1",
+        help=f"number of added frequency samples per Gaussian Process iteration")
+    parser.add_argument(
         "-t", "--terms", dest="t", default="3", 
         help=f"number of terms [stacked-RBFP and LF-NSM]")
     parser.add_argument(
-        "-s", "--sample", "--sampling-strategy", dest="s", default="0", 
-        help=f"type of sampling strategy [{sampling_types}]")
+        "-s", "--sample", "--sampling-strategy", dest="s", 
+        default="1", 
+        help=f"type of sampling strategy {sampling_types}")
     parser.add_argument(
         "-i", "--max-iter", dest="i", default="20", 
         help=f"maximum iteration. maximum samples = n_init + max_iter")
@@ -43,118 +73,9 @@ def configuration():
     return parser.parse_args()
 
 
-def main():
-    config = configuration()
-    # -----------------------
-    # CONFIG
-    # -----------------------
-    adaptive_basis = True
-    acquisition_function = int(config.ac_fx)
-    acquisition_function_candidate = [
-        "maximum variance", "expected improvement", "upper confidence bound"
-    ]
-    Xnormalizer_type = int(config.xn)
-    Xnormalizer_type_candidate = [
-        "pass", "z-score", "min-max", "power transform", 
-        "standardized power transform", "scaled z-score"
-    ]
-    sampling_type = int(config.s)
-    sampling_type_candidate = [
-        "grid", "latin-hyper-cube"
-        ]
-    n_init = int(config.n)
-    terms  = int(config.t)
-    max_iter = int(config.i)
-    tol = float(config.tol)
+def validate(*args):
 
-    # -----------------------
-    # SOLVER
-    # -----------------------
-
-    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
-    # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
-
-    # solver = OnFlySolver(
-    #     workingpath="./data/VWT-data/sphere",
-    #     model_name="sphere",
-    #     angles=np.linspace(0, 180, 181)
-    #     )
-
-    # solver = OnFlySolver(
-    #     workingpath="./data/VWT-data/prime-airplane",
-    #     model_name="Open-Duct_PRIME_model_meshAA",
-    #     angles=np.linspace(0, 180, 181)
-    #     )
-
-
-    # -----------------------
-    # GP TRAINER
-    # -----------------------
-    # from gp_sklearn import train_gp_sklearn as trainer
-    from gp_Kenny import train_model_gp_Kenny as trainer
-    # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
-
-    # -----------------------
-    # GP MODEL
-    # -----------------------
-    # model = ReducedBasisGP1D
-    # model = ReducedBasisGP2D
-    model = ReducedBasisGPMultiTask
-
-    # -----------------------
-    # OUTPUT DRIECTORY SETUP
-    # -----------------------
-    dir_out = Path("out")
-    simulation_number = len([d for d in dir_out.glob("*") if d.is_dir()]) + 1
-    dir_out = dir_out/Path(f"GP_test_{simulation_number:04d}")
-    dir_out.mkdir()
-    stdout = Tee(dir_out/"GP_results.log", "w")     # Log file setup
-    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
-    print(f"  >> Adaptive basis: {adaptive_basis}")
-    print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
-    print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")
-    print(f"  >> Sampling strategy: {sampling_type_candidate[sampling_type]}")
-    print(f"  >> n_init: {n_init}")
-    print(f"  >> terms: {terms}")
-    print(f"  >> max_iter: {max_iter}")
-    print(f"  >> tol: {tol}")
-    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
-    stdout.flush()
-    # -----------------------
-    # BEGIN
-    # -----------------------
-    f_min, f_max, f_num = 9500, 10500, 101
-    # f_min, f_max, f_num = 500, 1500, 151
-    # f_test = np.linspace(f_min, f_max, 101)
-    f_test = np.linspace(f_min, f_max, f_num)
-    angles = np.linspace(0, 180, 181)  # 181 angles
-    # angles = np.linspace(0, 180, 19)
-    rbgp = model(
-        solver, trainer, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
-        acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, 
-        terms=terms, verbose=True
-    )
-    rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=0)
-    make_pretty_number = lambda freq: str(round(freq, 3))
-    pretty_number = list(map(make_pretty_number,rbgp.freqs))
-    print(f"\n  >> Initial Frequencies: {pretty_number}\n")
-
-    # max_iter = len(f_test) - n_init
-    for it in range(max_iter):  # 5 adaptive iterations
-        f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, len(f_test))
-        print(f"\nIteration {it+1} / {max_iter}: acquisition {ac_fx:.10f} | variance {avg_var:.10f}")
-        print("number of frequency samples:", len(rbgp.freqs))
-        if avg_var < tol: 
-            break
-        print(f"sampling new frequency {f_next:.3f}")
-        rbgp.update(f_next)
-        stdout.flush()
-    print("\n ======  Stopping criterion met.  ====== \n")
-    print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
-    print("  >> Final acquisition:", ac_fx, sep="\t")
-    print("  >> Final variance:", avg_var, sep="\t")
-    print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
-    stdout.flush()
+    rbgp, f_test, solver, stdout, dir_out = args
 
     # Predict at new frequency
     pred  = rbgp.reconstruct(f_test)
@@ -213,6 +134,171 @@ def main():
             hf.colorbar(im[i,j], ax=hx[i,j])
     hf.savefig(dir_out/"GP_results_2d.png")
     ######### end 2d plot #########
+    return 0
+
+
+def export(file_path, np_data, freqs, theta, phi):
+    def make_col(data): return " ".join(map(str, data))
+    def make_row(data): return "\n".join(map(str, data))
+    np_data_ravel = np_data.reshape(-1)
+    angles = list(zip(theta, phi))
+    header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
+    data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+            for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
+    data = make_row([make_col(header), *data])
+    return Path(file_path).open('w').write(data)
+
+
+def main():
+    config = configuration()
+    # -----------------------
+    # CONFIG
+    # -----------------------
+    adaptive_basis = True
+    acquisition_function = int(config.ac_fx)
+    acquisition_function_candidate = [
+        "maximum variance", "expected improvement", "upper confidence bound"
+    ]
+    Xnormalizer_type = int(config.xn)
+    Xnormalizer_type_candidate = [
+        "pass", "z-score", "min-max", "power transform", 
+        "standardized power transform", "scaled z-score"
+    ]
+    sampling_type = int(config.s)
+    sampling_type_candidate = [
+        "grid", "latin-hyper-cube"
+        ]
+    sweep_type = int(config.ast)
+    sweep_type_candidate = [
+        "phi", "theta"
+        ]
+    n_init = int(config.n)
+    terms  = int(config.t)
+    max_iter = int(config.i)
+    tol = float(config.tol)
+    angles = np.linspace(*map(int, config.angle))  # 181 angles
+
+    # -----------------------
+    # SOLVER
+    # -----------------------
+
+    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
+
+    workingpath = config.path
+    if workingpath is None:
+        workingpath = "./data/VWT-data/circylinder"
+        print(
+            "\n"*2, "#"*50, '\n', 
+            "WORKING_PATH not supplied. ", '\n',
+            "Fall back to default:", workingpath, '\n', 
+            "#"*50, "\n"*2,
+            )
+
+    # solver = OnFlySolver(
+    #     workingpath="./data/VWT-data/sphere",
+    #     model_name="sphere",
+    #     angles=np.linspace(0, 180, 181)
+    #     )
+
+    # solver = OnFlySolver(
+    #     workingpath="./data/VWT-data/prime-airplane",
+    #     model_name="Open-Duct_PRIME_model_meshAA",
+    #     angles=np.linspace(0, 180, 181)
+    #     )
+
+    # solver = OnFlySolver(
+    #     workingpath="./data/VWT-data/circylinder",
+    #     model_name="circylinder",
+    #     angles=np.linspace(0, 180, 181),
+    #     sweep_angle_type=1
+    #     )
+
+    solver = OnFlySolver(
+        workingpath=workingpath,
+        model_name=config.model,
+        angles=angles, 
+        sweep_angle_type=sweep_type
+        )
+
+    # -----------------------
+    # GP TRAINER
+    # -----------------------
+    from gp_sklearn import train_gp_sklearn as trainer
+    # from gp_Kenny import train_model_gp_Kenny as trainer
+    # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
+
+    # -----------------------
+    # GP MODEL
+    # -----------------------
+    model = ReducedBasisGP1D
+    # model = ReducedBasisGP2D
+    # model = ReducedBasisGPMultiTask
+
+    # -----------------------
+    # OUTPUT DRIECTORY SETUP
+    # -----------------------
+    dir_out = Path("out")
+    simulation_number = len([d for d in dir_out.glob("*") if d.is_dir()]) + 1
+    dir_out = dir_out/Path(f"GP_test_{simulation_number:04d}")
+    dir_out.mkdir()
+    stdout = Tee(dir_out/"GP_results.log", "w")     # Log file setup
+    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
+    print(f"  >> Adaptive basis: {adaptive_basis}")
+    print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
+    print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")
+    print(f"  >> Sampling strategy: {sampling_type_candidate[sampling_type]}")
+    print(f"  >> n_init: {n_init}")
+    print(f"  >> terms: {terms}")
+    print(f"  >> max_iter: {max_iter}")
+    print(f"  >> tol: {tol}")
+    print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {config.angle}")
+    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
+    stdout.flush()
+    # -----------------------
+    # BEGIN
+    # -----------------------
+    f_min, f_max, f_num = *map(float, config.freq[:2]), int(config.freq[2])
+    # f_min, f_max, f_num = 100, 300, 101
+    # f_min, f_max, f_num = 9500, 10500, 101
+    # f_min, f_max, f_num = 500, 1500, 151
+    # angles = np.linspace(0, 180, 181)  # 181 angles
+    # angles = np.linspace(0, 180, 19)
+    rbgp = model(
+        solver, trainer, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
+        acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, 
+        terms=terms, verbose=True
+    )
+    rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=0)
+    make_pretty_number = lambda freq: str(round(freq, 3))
+    pretty_number = list(map(make_pretty_number,rbgp.freqs))
+    print(f"\n  >> Initial Frequencies: {pretty_number}\n")
+
+    # max_iter = len(f_test) - n_init
+    for it in range(max_iter):  # 5 adaptive iterations
+        f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, f_num, int(config.add))
+        print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | variance {avg_var:.10f}")
+        print("number of frequency samples:", len(rbgp.freqs))
+        if avg_var < tol: 
+            break
+        f_next_str = " ".join(["[", *[f"{f:.3f}" for f in f_next], "]"])
+        print(f"sampling new frequencies:", f_next_str)
+        rbgp.update(f_next)
+        stdout.flush()
+    print("\n ======  Stopping criterion met.  ====== \n")
+    print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
+    print("  >> Final acquisition:", max(ac_fx), sep="\t")
+    print("  >> Final variance:", avg_var, sep="\t")
+    print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
+    stdout.flush()
+
+    f_export = np.linspace(f_min, f_max, f_num)
+    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+
+    if config.validate: 
+        # f_test = np.linspace(f_min, f_max, 101)
+        f_test = np.linspace(f_min, f_max, f_num)
+        validate(rbgp, f_test, solver, stdout, dir_out)
 
     # pltshow()
     return 0

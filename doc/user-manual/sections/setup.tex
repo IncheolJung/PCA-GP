@@ -1,0 +1,5 @@
+
+
+\texttt{P-GP-ID} itself is not a solver, but a Gaussian process-based tool that enables advanced frequency-interpolation with active sampling. Currently, \texttt{VWT-IE-Solver-Unified-DG.x} is embedded as the backend sover to provide the high fidelity solutions. To set up the problem of interest, user needs to create setup a simulation directory according to \texttt{VWT-IE-Solver-Unified-DG.x} user manual. This directory then needs to go under \texttt{data/VWTdata} directory.
+
+This created directory will be supplied as an argument to the \texttt{main.py}. Otherwise, it will automatically fall back to its default setting: \texttt{./data/VWT-data/circylinder}

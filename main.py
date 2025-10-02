@@ -270,7 +270,7 @@ def main():
         acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, 
         terms=terms, verbose=True
     )
-    rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=0)
+    rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=sampling_type)
     make_pretty_number = lambda freq: str(round(freq, 3))
     pretty_number = list(map(make_pretty_number,rbgp.freqs))
     print(f"\n  >> Initial Frequencies: {pretty_number}\n")

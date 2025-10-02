@@ -28,14 +28,14 @@ class fileIOdatareader:
     def __call__(self, freq, angle):
         if isinstance(freq, Iterable):
             return np.array([self.__call__(f, angle) for f in freq])
-            # results = Parallel(n_jobs=4, prefer="threads")(
+            # results = Parallel(n_jobs=4, backend="loky")(
             #     delayed(self.__call__)(f, angle, delay=0.01*i) 
             #     for i, f in enumerate(freq)
             # )
             # return np.array(list(results))
         if isinstance(angle, Iterable):
             return np.array([self.__call__(freq, a) for a in angle])
-            # return Parallel(n_jobs=4, prefer="threads")(
+            # return Parallel(n_jobs=4, backend="loky")(
             #     delayed(self.__call__)(freq, a) for a in angle
             # )
             # return np.array(list(results))
@@ -103,9 +103,11 @@ class OnFlySolver:
         if sweep_angle_type==0:     # phi-sweep
             self.phi = np.array(angles)
             self.theta = 90*np.ones(len(angles))
+            self.angles = self.theta
         elif sweep_angle_type==1:   # theta-sweep
             self.phi = np.zeros(len(angles))
             self.theta = np.array(angles)
+            self.angles = self.phi
         else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
         self.n_angles = len(angles)
         self.encoder = lambda x: round(float(x), precision)
@@ -130,11 +132,11 @@ class OnFlySolver:
         #     else:       # sequential if one freq
         #         print("Now using sequential solver")
         #         for freq in self.freqs:
-        #             self.__call__(freq, self.phi[0])
+        #             self.__call__(freq, self.angles[0])
 
         if len(self.freqs) > 0:
             for freq in self.freqs:
-                self.__call__(freq, self.phi[0])
+                self.__call__(freq, self.angles[0])
 
         def get_freqs_from_dir(workingpath):
             def rm_r(path: Path):
@@ -164,18 +166,18 @@ class OnFlySolver:
         #         )
         time.sleep(delay)
         if isinstance(freq, Iterable):
-            # return [self.__call__(f, angle) for f in freq]
-            results = Parallel(n_jobs=4, prefer="threads")(
+            # return np.array([self.__call__(f, angle) for f in freq])
+            results = Parallel(n_jobs=4, backend="loky")(
                 delayed(self.__call__)(f, angle, delay=0.01*i) 
                 for i, f in enumerate(freq)
             )
             return np.array(list(results))
         if isinstance(angle, Iterable):
-            results = [self.__call__(freq, a) for a in angle]
-            # return Parallel(n_jobs=4, prefer="threads")(
+            return np.array([self.__call__(freq, a) for a in angle])
+            # return Parallel(n_jobs=4, backend="loky")(
             #     delayed(self.__call__)(freq, a) for a in angle
             # )
-            return np.array(results)
+            # return np.array(list(results))
         else:
             freq, angle = self.encoder(freq), self.encoder(angle)
             if (self._is_data_exist(freq)): pass
@@ -281,13 +283,27 @@ class OnFlySolver:
         return 0
     
     def _load_farfield_data(self, farfield_file: str, freq = None):
-        if freq is None: freq = float(Path(farfield_file).parent.name)
+        if freq is None: 
+            try: freq = float(Path(farfield_file).absolute().parent.name)
+            except ValueError: 
+                for key, value in self.tmp.items():
+                    if value == Path(farfield_file).parent.name:
+                        freq = key
+                        break
+                if freq is None:
+                    raise FileNotFoundError(
+                        "Cannot find farfield data:", 
+                        Path(farfield_file).absolute().__str__()
+                    )
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
         if len(farfield_data) != len(self.phi): 
             raise RuntimeError("data unmatched with queried angle:\n"
                                f"datasize {len(farfield_data)} != request {len(self.phi)}\n"
-                               f"at frequency {freq}")
+                               f"at frequency {freq}\n"
+                               f"farfield_file: {Path(farfield_file).absolute().__str__()}\n"
+                               f'{"\n".join(Path(farfield_file).open('r').readlines())}'
+                               )
         for d in farfield_data:
             theta, phi, cpol_re, cpol_im, xpol_re, xpol_im = map(float, d.strip("\n").split())
             if self.sweep_angle_type==0:    # phi-sweep

@@ -1,2 +1,0 @@
-#!python
-cubit.cmd('set node constraint on')

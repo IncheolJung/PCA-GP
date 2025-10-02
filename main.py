@@ -114,8 +114,17 @@ def validate(*args):
     denom_real = np.square(np.max(truth.real) - np.min(truth.real))
     numer_imag = np.square(np.abs(pred.imag - truth.imag))
     denom_imag = np.square(np.max(truth.imag) - np.min(truth.imag))
-    error_real = 10 * np.log10(numer_real / denom_real)
-    error_imag = 10 * np.log10(numer_imag / denom_imag)
+    np.seterr(all="raise")
+    try:
+        error_real = 10 * np.log10(numer_real / denom_real + eps*denom_real)
+        error_imag = 10 * np.log10(numer_imag / denom_imag + eps*denom_imag)
+        error_scale = "dB"
+    except FloatingPointError:
+        error_real = numer_real
+        error_imag = numer_imag
+        error_scale = "linear"
+    np.seterr()
+    print(f"Error scale: {error_scale}")
     error = error_real + 1j*error_imag
     im[0,0] = hx[0,0].imshow(pred.real,  cmap="turbo", aspect="auto", extent=extent)
     im[0,1] = hx[0,1].imshow(truth.real, cmap="turbo", aspect="auto", extent=extent)
@@ -127,8 +136,8 @@ def validate(*args):
     hx[0,1].set_title("TRUTH RE")
     hx[1,0].set_title("PRED IM")
     hx[1,1].set_title("TRUTH IM")
-    hx[0,2].set_title("RMSE RE [dB]")
-    hx[1,2].set_title("RMSE IM [dB]")
+    hx[0,2].set_title(f"RMSE RE [{error_scale}]")
+    hx[1,2].set_title(f"RMSE IM [{error_scale}]")
     for i in range(nrows): 
         for j in range(ncols):
             hf.colorbar(im[i,j], ax=hx[i,j])
@@ -137,14 +146,27 @@ def validate(*args):
     return 0
 
 
-def export(file_path, np_data, freqs, theta, phi):
+# --- angular PCA --- #
+# def export(file_path, np_data, freqs, theta, phi):
+#     def make_col(data): return " ".join(map(str, data))
+#     def make_row(data): return "\n".join(map(str, data))
+#     np_data_ravel = np_data.reshape(-1)
+#     angles = list(zip(theta, phi))
+#     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
+#     data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+#             for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
+#     data = make_row([make_col(header), *data])
+#     return Path(file_path).open('w').write(data)
+
+
+# --- current PCA --- #
+def export(file_path, np_data, freqs, nodes):
     def make_col(data): return " ".join(map(str, data))
     def make_row(data): return "\n".join(map(str, data))
     np_data_ravel = np_data.reshape(-1)
-    angles = list(zip(theta, phi))
     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
-    data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
-            for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
+    data = [make_col([f, n, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+            for i, (f, n) in enumerate(product(freqs, nodes))]
     data = make_row([make_col(header), *data])
     return Path(file_path).open('w').write(data)
 
@@ -216,11 +238,16 @@ def main():
     #     sweep_angle_type=1
     #     )
 
-    solver = OnFlySolver(
-        workingpath=workingpath,
-        model_name=config.model,
-        angles=angles, 
-        sweep_angle_type=sweep_type
+    # solver = OnFlySolver(
+    #     workingpath=workingpath,
+    #     model_name=config.model,
+    #     angles=angles, 
+    #     sweep_angle_type=sweep_type
+    #     )
+
+    solver = OnFlySolverMyMoM(
+        workingpath="./data/MoM-data/spiral",
+        model_name="test"
         )
 
     # -----------------------
@@ -267,7 +294,8 @@ def main():
     # angles = np.linspace(0, 180, 19)
     rbgp = model(
         solver, trainer, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
-        acquisition_type=acquisition_function, Xnormalizer_type=Xnormalizer_type, 
+        acquisition_type=acquisition_function, 
+        Xnormalizer_type=Xnormalizer_type, normalizeY=True, 
         terms=terms, verbose=True
     )
     rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=sampling_type)
@@ -277,10 +305,11 @@ def main():
 
     # max_iter = len(f_test) - n_init
     for it in range(max_iter):  # 5 adaptive iterations
-        f_next, ac_fx, avg_var = rbgp.acquisition_next_frequency(f_min, f_max, f_num, int(config.add))
-        print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | variance {avg_var:.10f}")
+        f_next, ac_fx, POD_energy = \
+            rbgp.acquisition_next_frequency(f_min, f_max, f_num, int(config.add))
+        print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | pred_to_total_POD_energy_ratio {POD_energy:.10f}")
         print("number of frequency samples:", len(rbgp.freqs))
-        if avg_var < tol: 
+        if POD_energy < tol: 
             break
         f_next_str = " ".join(["[", *[f"{f:.3f}" for f in f_next], "]"])
         print(f"sampling new frequencies:", f_next_str)
@@ -289,12 +318,13 @@ def main():
     print("\n ======  Stopping criterion met.  ====== \n")
     print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
     print("  >> Final acquisition:", max(ac_fx), sep="\t")
-    print("  >> Final variance:", avg_var, sep="\t")
+    print("  >> Final pred_to_total_POD_energy_ratio:", POD_energy, sep="\t")
     print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
     stdout.flush()
 
     f_export = np.linspace(f_min, f_max, f_num)
-    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+    # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.nodes)
 
     if config.validate: 
         # f_test = np.linspace(f_min, f_max, 101)

@@ -189,7 +189,7 @@ def train_model_per_batch(
     #     {'params': unique(likelihood_params), 'lr': 1e-2},
     # ])
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=0.05, weight_decay=0
+        model.parameters(), lr=1, weight_decay=0
     )
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(
         likelihood, model

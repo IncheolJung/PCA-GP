@@ -115,28 +115,26 @@ class OnFlySolver:
         self._init_in_file()        # init .in with dummy freq
         self.tmp = {}               # tmp directories for simulations
 
-        # if len(self.freqs) > 0:
-        #     if len(self.freqs) > 1: # parallel if multiple freq
-        #         print("Now using Parallel solver")
-        #         _run_one = lambda f: self.run(f)
-        #         freq_to_run = []
-        #         for freq in self.freqs:
-        #             if (self._is_data_exist(freq)): pass
-        #             else: freq_to_run.append(freq)
-        #         results = Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
-        #             delayed(_run_one)(f) for f in range(freq_to_run)
-        #         )
-        #         broken_runs = {i: r for i,r in enumerate(results) if r != 0}
-        #         if len(broken_runs): 
-        #             raise RuntimeError(f"Simulations broken: {broken_runs}")
-        #     else:       # sequential if one freq
-        #         print("Now using sequential solver")
-        #         for freq in self.freqs:
-        #             self.__call__(freq, self.angles[0])
-
         if len(self.freqs) > 0:
-            for freq in self.freqs:
-                self.__call__(freq, self.angles[0])
+            if len(self.freqs) > 1: # parallel if multiple freq
+                _run_one = lambda f: self.run(f)
+                freq_to_run = []
+                for freq in self.freqs:
+                    if (self._is_data_exist(freq)): pass
+                    else: freq_to_run.append(freq)
+                results = Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
+                    delayed(_run_one)(f) for f in range(freq_to_run)
+                )
+                broken_runs = {i: r for i,r in enumerate(results) if r != 0}
+                if len(broken_runs): 
+                    raise RuntimeError(f"Simulations broken: {broken_runs}")
+            else:       # sequential if one freq
+                for freq in self.freqs:
+                    self.__call__(freq, self.angles[0])
+
+        # if len(self.freqs) > 0:
+        #     for freq in self.freqs:
+        #         self.__call__(freq, self.angles[0])
 
         def get_freqs_from_dir(workingpath):
             def rm_r(path: Path):
@@ -150,9 +148,9 @@ class OnFlySolver:
             for d in Path(workingpath).glob("*/"):
                 if d.is_dir():
                     try: freqs.append(float(d.name))
-                    except: rm_r(d)
+                    except ValueError: rm_r(d)
             return freqs
-        freqs_computed_before = get_freqs_from_dir(Path(workingpath))
+        freqs_computed_before = get_freqs_from_dir(workingpath)
         if len(freqs_computed_before) > 0:
             for freq in freqs_computed_before:
                 self._load_farfield_data(f"{self.workingpath}/{freq}/{self.model_name}.efar")
@@ -356,3 +354,180 @@ class OnFlySolver:
         self._load_farfield_data(f"./{self.model_name}.efar", freq_query)
         self._exit_simulation(freq_query, org_path)
         return 0
+    
+
+class OnFlySolverMyMoM:
+
+    def __init__(
+            self, 
+            workingpath: str, 
+            model_name: str = None, 
+            init_freqs: list = [], 
+            angles = None,              # dummy input
+            sweep_angle_type = None,    # dummy input
+            other_args = [90, 0, 0, 1e-5], 
+            precision: int = 3
+            ):
+        self.workingpath = Path(workingpath).absolute().__str__()
+        self.model_name = model_name
+        base_path = Path(workingpath).absolute().parent
+        self.solver = base_path/"bin"/"run.sh"  # list of exe
+        self.freqs = init_freqs
+        self.nodes = []     # will check nodes every time run()
+        self.encoder = lambda x: f"{float(x):.3e}"
+        self.args = " ".join(map(str, other_args))
+        self.currents = {}   # keys: (freq, node), values: current
+        self.tmp = {}        # reserved for parallelized solve
+
+        def get_freqs_from_dir(workingpath):
+            def rm_r(path: Path):
+                if path.is_dir():
+                    for child in path.iterdir():
+                        rm_r(child)  # recurse into children
+                    path.rmdir()      # remove the now-empty directory
+                else:
+                    path.unlink()     # remove file or symlink
+            freqs = []
+            for d in Path(workingpath).glob("*/"):
+                if d.is_dir():
+                    try: freqs.append(float(d.name))
+                    except ValueError: rm_r(d)
+            return freqs
+        freqs_computed_before = get_freqs_from_dir(workingpath)
+        if len(freqs_computed_before) > 0:
+            for freq in freqs_computed_before:
+                freq = self.encoder(freq)
+                self._load_current_data(f"{self.workingpath}/{freq}/I.mat", freq)
+            self.freqs.extend(list(sorted(freqs_computed_before)))
+
+        if len(self.freqs) > 0:
+            for freq in self.freqs:
+                self.__call__(freq, 1)
+
+        return None
+    
+    def __call__(self, freq, node, delay=0):
+        # Handle iterable frequency
+        if isinstance(freq, Iterable) and not isinstance(freq, (str, bytes)):
+            return np.array([self.__call__(f, node, delay=delay) for f in freq])
+
+        # Handle iterable node
+        if isinstance(node, Iterable) and not isinstance(node, (str, bytes)):
+            return np.array([self.__call__(freq, n, delay=delay) for n in node])
+        else:
+            freq, node = self.encoder(freq), node
+            if (self._is_data_exist(freq)): pass
+            else: 
+                exit = self.run(freq)
+                if exit != 0:
+                    raise RuntimeError(f"simulation error exit {exit}")
+        return self.currents[(freq, node)]     # self.currents[(freq, node)] = current
+    
+    def _is_data_exist(self, freq_query):
+        return freq_query in self.freqs
+    
+    def _add_freq(self, new_freq):
+        return self.freqs.append(new_freq)
+    
+    def _setup_simulation(self, freq_query):
+        "mkdir ~tmp_$freq_query && cp $model_name.* $freq_query"
+        self.tmp[freq_query] = f"~tmp{len(self.tmp)+1}_{freq_query}"
+        working_path_now = self.tmp[freq_query]
+        os.mkdir(working_path_now)
+        self._cp_all_files(to_dir=working_path_now)
+        os.chdir(working_path_now)
+        return 0
+    
+    def _exit_simulation(self, freq_query, org_path):
+        "cd .. && mv ~tmp_$freq_query"
+        import re
+        os.chdir("../")
+        old_name = self.tmp[freq_query]
+        new_name = re.sub(r"^~tmp\d+_", "", old_name)
+        os.rename(old_name, new_name)
+        del self.tmp[freq_query]
+        os.chdir(org_path)
+        return 0
+    
+    def _cp_all_files(self, from_dir=".", to_dir=".", new_name=False):
+        "Now it will be just the mesh file"
+        import shutil
+        from_dir = Path(from_dir)
+        to_dir   = Path(to_dir)
+        to_dir.mkdir(parents=True, exist_ok=True)
+        files_to_move = list(from_dir.glob(f"{self.model_name}*.*"))
+        for f in files_to_move:
+            if f.is_file():
+                shutil.copy2(f, to_dir / f.name)
+        return 0
+    
+    def _load_current_data(self, current_file: str, freq: float):
+        freq = self.encoder(freq)
+        current_data = Path(current_file).open('r').readlines()[1:]
+        if len(current_data) != len(self.nodes): 
+            if not len(self.nodes) == 0:
+                raise RuntimeError(
+                    "data unmatched with queried node ID:\n"
+                    f"datasize {len(current_data)} != request {len(self.nodes)}\n"
+                    f"at frequency {freq}\n"
+                    f"farfield_file: {Path(current_file).absolute().__str__()}\n"
+                    f'{"\n".join(Path(current_file).open('r').readlines())}'
+                )
+        def parse_complex(line:str):
+            clean_line = line.strip("\n").strip("(").strip(")")
+            return complex(*map(float, clean_line.split(",")))
+        for i, d in enumerate(current_data):
+            self.currents[(freq, i)] = parse_complex(d)
+        self.freqs.append(freq)
+        return 0
+    
+    def run(self, freq_query):
+        from subprocess import Popen, STDOUT, PIPE
+        print(f"\n ======  Adding Frequency Sample: {freq_query}  ====== \n")
+        freq_query = self.encoder(freq_query)
+        org_path = os.getcwd()
+        os.chdir(self.workingpath)
+        self._setup_simulation(freq_query)
+        log_file_path = f"{self.model_name}.log"
+        log_monitor_path = f"{self.workingpath}/compute.log"
+
+        # Run simulation
+        log_file = open(log_file_path, "w")
+        log_monitor = open(log_monitor_path, "w")
+        # Start the process
+        prog = Popen(
+            ["bash", self.solver, freq_query, self.args],
+            stdout=PIPE,
+            stderr=STDOUT,
+            text=True,   # makes stdout/stderr strings instead of bytes
+        )
+
+        # Read stdout line by line, write to file and print to console
+        for line in prog.stdout:
+            # print(line, end='')      # print to console
+            log_file.write(line)      # write to log file
+            log_file.flush()          # flush after every line
+            log_monitor.write(line)      # write to log file
+            log_monitor.flush()          # flush after every line
+            sys.stdout.flush()        # optional: ensure console shows immediately
+
+        prog.wait()
+
+        log_file.close()
+        log_monitor.close()
+
+        # self._cp_all_files(to_dir=f"./{freq_query}")
+        # os.chdir(org_path)
+        self._load_current_data(f"./I.mat", freq_query)
+        self._exit_simulation(freq_query, org_path)
+        return 0
+    
+
+if __name__=="__main__":
+    workingpath = "./data/MoM-data/test"
+    model_name = "test"
+    app = OnFlySolverMyMoM(
+        workingpath, model_name,
+        init_freqs=[200e6]
+    )
+    print(app([100e6, 200e6], 10))

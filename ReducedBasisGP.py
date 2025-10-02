@@ -107,22 +107,7 @@ class ReducedBasisGPBASE:
 
         # Data normalizer
         X = np.array(self.freqs)[:, None]
-        if (self.Xnormalizer_type==0):      # do nothing
-            self.normalizerX = dummy_preprocesser().fit(X)
-        elif (self.Xnormalizer_type==1):    # z-score
-            self.normalizerX = StandardScaler().fit(X)
-        elif (self.Xnormalizer_type==2):    # min-max
-            self.normalizerX = MinMaxScaler().fit(X)
-        elif (self.Xnormalizer_type==3):    # power-transform
-            self.normalizerX = PowerTransformer().fit(X)
-        elif (self.Xnormalizer_type==4):    # standardizer + power-transform
-            self.normalizerX = Pipeline([("std", StandardScaler()), ("pwr", PowerTransformer())]).fit(X)
-        elif (self.Xnormalizer_type==5):    # standardizer + min-max
-            self.normalizerX = Pipeline([
-                ("std", StandardScaler()), 
-                ("scale", MinMaxScaler(feature_range=(0, 100)))
-                ]).fit(X)
-        else: RuntimeError(f"INVALID ACQUISITION TYPE: {self.Xnormalizer_type} must be < 6")
+        self.normalizerX = self.get_data_normalizer(X)
 
         # Acquisition functions
         if (self.acquisition_type==0):
@@ -136,6 +121,25 @@ class ReducedBasisGPBASE:
         self._update_basis()
         self._fit_gps()
         return 0
+    
+    def get_data_normalizer(self, X):
+        if (self.Xnormalizer_type==0):      # do nothing
+            normalizerX = dummy_preprocesser().fit(X)
+        elif (self.Xnormalizer_type==1):    # z-score
+            normalizerX = StandardScaler().fit(X)
+        elif (self.Xnormalizer_type==2):    # min-max
+            normalizerX = MinMaxScaler().fit(X)
+        elif (self.Xnormalizer_type==3):    # power-transform
+            normalizerX = PowerTransformer().fit(X)
+        elif (self.Xnormalizer_type==4):    # standardizer + power-transform
+            normalizerX = Pipeline([("std", StandardScaler()), ("pwr", PowerTransformer())]).fit(X)
+        elif (self.Xnormalizer_type==5):    # standardizer + min-max
+            normalizerX = Pipeline([
+                ("std", StandardScaler()), 
+                ("scale", MinMaxScaler(feature_range=(0, 100)))
+                ]).fit(X)
+        else: RuntimeError(f"INVALID ACQUISITION TYPE: {self.Xnormalizer_type} must be < 6")
+        return normalizerX
     
     def latin_hypercube_sampling(
         self, val_min, val_max, n
@@ -175,7 +179,7 @@ class ReducedBasisGPBASE:
     def acquisition_next_frequency(self, f_min, f_max, n_grid=101, n_new_samples=1):
         """Pick frequency that maximizes integrated variance across coefficients"""
 
-        total_mu, total_var, f_domain = self._pred_gps(f_min, f_max, n_grid)
+        total_mu, total_var, f_domain, POD_energy = self._pred_gps(f_min, f_max, n_grid)
         # print(np.array(preds))
         
         responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
@@ -198,9 +202,9 @@ class ReducedBasisGPBASE:
         new_freq_out = f_domain[chosen_idx, 0].tolist()
         ac_vals_out = ac_vals[chosen_idx].tolist()
 
-        denom = self.r
+        # denom = self.r
 
-        return new_freq_out, ac_vals_out, np.sum(total_var)/denom
+        return new_freq_out, ac_vals_out, POD_energy
     
     def update(self, f_new):
         if isinstance(f_new, Iterable): 
@@ -234,8 +238,9 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
         
         self.gps_real = []
         self.gps_imag = []
-        x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
-
+        x_train = self.normalizerX.fit_transform(np.array(self.freqs)[:, None])
+        
+        self.normalizerY = []
         for i in range(self.r):
             # Separate real and imaginary parts
             y_train = self.coeffs[:, i][:, None]
@@ -253,6 +258,7 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
         x_pred = self.sampler(f_min, f_max, n_grid)
         x_pred = self.normalizerX.transform(x_pred)
         total_mu, total_var = np.zeros(n_grid), np.zeros(n_grid)
+        weight_sum, normalized_total_var = 0, np.zeros(n_grid)
         # preds = []
         for i in range(self.r):
             mu_r, std_r = self.gps_real[i].predict(x_pred, return_std=True)
@@ -261,8 +267,13 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             weight = self.S[i]**2
             total_mu += weight * (mu_r**2 + mu_i**2)
             total_var += weight * (std_r**2 + std_i**2)
+            std_r /= self.gps_real[i]._y_train_std
+            std_i /= self.gps_imag[i]._y_train_std
+            normalized_total_var += weight * (std_r**2 + std_i**2)
+            weight_sum += weight
             # preds.append(weight * (mu_r**2 + mu_i**2))
-        return total_mu, total_var, x_pred
+        frac_predictive = np.mean(normalized_total_var / (weight_sum + 1e-30))
+        return total_mu, total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""
@@ -288,7 +299,7 @@ class ReducedBasisGP2D(ReducedBasisGPBASE):
         "fit 2d data directly"
         self.gps_real = []
         self.gps_imag = []
-        x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
+        x_train = self.normalizerX.fit_transform(np.array(self.freqs)[:, None])
         x_train = np.array(list(product(np.squeeze(x_train, axis=-1), np.arange(self.r))))
         y_train = self.coeffs.reshape(-1, 1, order="C")
 
@@ -314,7 +325,7 @@ class ReducedBasisGP2D(ReducedBasisGPBASE):
         weight = np.square(self.S)[None, :]
         total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
         total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
-        return total_mu, total_var, x_pred
+        return total_mu, total_var, x_pred, total_var
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""
@@ -362,7 +373,7 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         weight = np.square(self.S)[None, :]
         total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
         total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
-        return total_mu, total_var, x_pred
+        return total_mu, total_var, x_pred, total_var
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""

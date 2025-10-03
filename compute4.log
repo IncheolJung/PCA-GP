@@ -1,0 +1,20 @@
+Data loaded from data/data-for-kenny-paper-HH.npz
+x.shape: (18281, 2)
+x.range: [([9500.    0.]), ([10500.   180.])]
+y.shape: (18281,)
+y.range: [((-0.03082517+0.003975031j)), ((0.04148419+0.003385245j))]
+
+ ======  Simulation 152 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> Sampling strategy: grid
+  >> n_init: 3
+  >> terms: 5
+  >> max_iter: 20
+  >> tol: 0.001
+  >> angles phi: [start, end, number] = (0.0, 180.0, 181)
+
+ ======  Simulation 152 Initialized  ====== 
+

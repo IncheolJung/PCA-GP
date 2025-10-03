@@ -3,7 +3,6 @@ import torch, gpytorch
 import warnings
 from gpytorch.utils.warnings import GPInputWarning
 from torch.nn.utils import clip_grad_norm_
-from copy import deepcopy
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # device = 'cpu'
@@ -41,6 +40,7 @@ class GPModel(gpytorch.models.ExactGP):
             self.y_normalizer   = lambda y: y
             self.y_denormalizer = lambda y: y
             self.y_denorm_std   = lambda y: y
+            self._y_train_std   = 1
         super(GPModel, self).__init__(
             train_x, self.y_normalizer(train_y), likelihood
             )
@@ -111,8 +111,8 @@ def train_model_per_batch(
     # print(f"Report from gp_Kenny.train_model_per_batch")
     # print("Input shapes:", train_x.shape, train_y.shape)
 
-    # kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
-    kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
@@ -139,9 +139,10 @@ def train_model_per_batch(
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
             num_tasks=train_y.shape[-1],
         ).double().to(device)
-        likelihood.noise = lower_bound # for example
-        tasknoise = 1e-12 * torch.ones_like(likelihood.task_noises)
-        likelihood.task_noises = tasknoise
+        likelihood.noise = 1e-3 * train_y.std() ** 2 # for example
+        # tasknoise = 1e-12 * torch.ones_like(likelihood.task_noises)
+        # likelihood.task_noises = tasknoise
+        likelihood.task_noises = 1e-3 * train_y.std() ** 2
         # likelihood.raw_noise.detach_()          # Freeze noise
         # likelihood.raw_task_noises.detach_()    # Freeze noise
         get_noise_bounds = lambda: f"{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}"
@@ -150,9 +151,9 @@ def train_model_per_batch(
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
         ).double().to(device)
         likelihood.noise_covar.initialize(noise=lower_bound)
-        likelihood.noise_covar.raw_noise.requires_grad_(False)  # freeze
-    # likelihood.noise = max(lower_bound, 1e-3 * train_y.std() ** 2)
-        get_noise_bounds = lambda: f"{torch.min(likelihood.noise):.2e}, {torch.max(likelihood.noise):.2e}"
+        # likelihood.noise_covar.raw_noise.requires_grad_(False)  # freeze
+        likelihood.noise = 1e-3 * train_y.std() ** 2
+        get_noise_bounds = lambda: f"{likelihood.noise[0]:.2e}"
 
     model = GPModel(
         train_x, train_y, likelihood, kernel, normalize_y=normalize_y
@@ -214,7 +215,7 @@ def train_model_per_batch(
 
     # number of epochs to wait without improvement (Early stop cond)
     # patience = 20
-    patience = int(training_iter/4)
+    patience = int(training_iter/6)
     # patience = 10 * min(10, int(log10(training_iter))) + 5
 
     best_loss = float("inf")

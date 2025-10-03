@@ -264,7 +264,7 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             mu_r, std_r = self.gps_real[i].predict(x_pred, return_std=True)
             mu_i, std_i = self.gps_imag[i].predict(x_pred, return_std=True)
             # weight variance by singular value (importance of mode)
-            weight = self.S[i]**2
+            weight = np.square(self.S[i])
             total_mu += weight * (mu_r**2 + mu_i**2)
             total_var += weight * (std_r**2 + std_i**2)
             std_r /= self.gps_real[i]._y_train_std
@@ -273,7 +273,7 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             weight_sum += weight
             # preds.append(weight * (mu_r**2 + mu_i**2))
         scaled_total_var = total_var / (weight_sum + 1e-30)
-        frac_predictive = np.mean(normalized_total_var / (weight_sum + 1e-30))
+        frac_predictive = np.mean(normalized_total_var) / (weight_sum + 1e-30)
         return total_mu, scaled_total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
@@ -323,13 +323,17 @@ class ReducedBasisGP2D(ReducedBasisGPBASE):
         mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
         mu_energy_density  = (mu_r**2  + mu_i**2 ).reshape(n_grid, self.r)
         std_energy_density = (std_r**2 + std_i**2).reshape(n_grid, self.r)
+        weight = np.square(self.S)[None, :]
+        total_mu = np.sum(weight * mu_energy_density, axis=-1)
+        total_var = np.sum(weight * std_energy_density, axis=-1)
         std_r /= self.gps_real[0]._y_train_std
         std_i /= self.gps_imag[0]._y_train_std
-        normalized_total_var = (std_r**2 + std_i**2)
-        weight = np.square(self.S)[None, :]
-        total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
-        total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
-        return total_mu, total_var, x_pred, total_var
+        normalized_total_var = weight * (std_r**2 + std_i**2)
+        weight_sum = np.sum(weight)
+
+        scaled_total_var = total_var / (weight_sum + 1e-30)
+        frac_predictive = np.mean(normalized_total_var) / (weight_sum + 1e-30)
+        return total_mu, scaled_total_var, x_pred, total_var, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""
@@ -370,18 +374,20 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         x_pred = self.sampler(f_min, f_max, n_grid)
         x_pred = self.normalizerX.transform(x_pred)
         # total_mu, total_var = np.zeros(n_grid), np.zeros(n_grid)
+        
         mu_r, std_r = self.gps_real[0].predict(x_pred, return_std=True)
         mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
-        mu_energy_density  = (mu_r**2  + mu_i**2 )
-        std_energy_density = (std_r**2 + std_i**2)
+        weight = np.square(self.S)[None, :]
+        total_mu = np.sum(weight * (mu_r**2  + mu_i**2 ), axis=-1)
+        total_var = np.sum(weight * (std_r**2 + std_i**2), axis=-1)
         std_r /= self.gps_real[0]._y_train_std
         std_i /= self.gps_imag[0]._y_train_std
-        normalized_total_var = (std_r**2 + std_i**2)
-        weight = np.square(self.S)[None, :]
-        total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
-        total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
-        frac_predictive = np.mean(normalized_total_var / (weight.sum() + 1e-30))
-        return total_mu, total_var, x_pred, frac_predictive
+        normalized_total_var = np.sum(weight * (std_r**2 + std_i**2), axis=-1)
+        weight_sum = np.sum(weight)
+        
+        scaled_total_var = total_var / (weight_sum + 1e-30)
+        frac_predictive = self.r * np.mean(normalized_total_var) / (weight_sum + 1e-30)
+        return total_mu, scaled_total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""

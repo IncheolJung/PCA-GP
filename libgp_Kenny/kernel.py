@@ -412,7 +412,7 @@ class StackedKernel(Kernel):
         return 0
 
     def forward(self, x1, x2, diag=False, **params):
-        return sum(k(x1, x2, diag=False, **params) for k in self.kernels)
+        return sum(k(x1, x2, diag=False, **params) for k in self.kernels) / len(self.kernels)
 
 def get_kernel(sett: KernelSettings) -> _Kernel:
     name, nu, dims, terms = sett

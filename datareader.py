@@ -522,6 +522,14 @@ class OnFlySolverMyMoM:
         self._exit_simulation(freq_query, org_path)
         return 0
     
+    def get_node_ids(self):
+        mesh_name = self.model_name + ".line"
+        with open(Path(self.workingpath)/mesh_name, 'r') as f:
+            scale = f.readline()
+            n_nodes = f.readline()
+        node_ids = np.arange(int(n_nodes))
+        return node_ids
+    
 
 if __name__=="__main__":
     workingpath = "./data/MoM-data/test"

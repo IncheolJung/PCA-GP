@@ -9,13 +9,13 @@ else
   mkdir -p "$LOG_DIR"
 fi
 
-for term in 3; do
+for term in 5; do
   for i in {0..2}; do
     for j in {1..5}; do
-      for trial in {1..1}; do
+      for trial in {1..5}; do
         LOG=compute$((i+j+trial)).log
         # grid sampling for variance calc
-        PARMS="-a $i -x $j -s 0 -t $term"
+        PARMS="-a $i -x $j -s 0 -t $term -v"
         # python $EXE $PARMS | tee $LOG
         { /bin/time -v -o $MEMLOG python $EXE $PARMS; } 2>&1 | tee $LOG
         cat $MEMLOG >> $LOG

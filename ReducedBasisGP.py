@@ -96,8 +96,8 @@ class ReducedBasisGPBASE:
             print(f"falling back to sampling_strategy 0 (grid sampling)")
             return self.initialize(f_min, f_max, 0)
         
-        f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
-        # f_init = self.sampler(f_min, f_max, self.n_init).squeeze(-1)
+        # f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
+        f_init = self.sampler(f_min, f_max, self.n_init).squeeze(-1)
         self.freqs = list(f_init)
         Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
         # Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)
@@ -272,8 +272,9 @@ class ReducedBasisGP1D(ReducedBasisGPBASE):
             normalized_total_var += weight * (std_r**2 + std_i**2)
             weight_sum += weight
             # preds.append(weight * (mu_r**2 + mu_i**2))
+        scaled_total_var = total_var / (weight_sum + 1e-30)
         frac_predictive = np.mean(normalized_total_var / (weight_sum + 1e-30))
-        return total_mu, total_var, x_pred, frac_predictive
+        return total_mu, scaled_total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""
@@ -322,6 +323,9 @@ class ReducedBasisGP2D(ReducedBasisGPBASE):
         mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
         mu_energy_density  = (mu_r**2  + mu_i**2 ).reshape(n_grid, self.r)
         std_energy_density = (std_r**2 + std_i**2).reshape(n_grid, self.r)
+        std_r /= self.gps_real[0]._y_train_std
+        std_i /= self.gps_imag[0]._y_train_std
+        normalized_total_var = (std_r**2 + std_i**2)
         weight = np.square(self.S)[None, :]
         total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
         total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
@@ -348,12 +352,12 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         "fit 2d data directly"
         self.gps_real = []
         self.gps_imag = []
-        x_train = self.normalizerX.transform(np.array(self.freqs)[:, None])
+        x_train = self.normalizerX.fit_transform(np.array(self.freqs)[:, None])
         y_train = self.coeffs
 
         gp_r, gp_i = self.train_gp(
             x_train, y_train, terms=self.terms, 
-            training_iter=200*self.r, 
+            training_iter=100*self.r, 
             verbose=self.verbose, normalize_y=self.normalizeY, 
             dims = x_train.shape[-1]
             )
@@ -370,10 +374,14 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
         mu_energy_density  = (mu_r**2  + mu_i**2 )
         std_energy_density = (std_r**2 + std_i**2)
+        std_r /= self.gps_real[0]._y_train_std
+        std_i /= self.gps_imag[0]._y_train_std
+        normalized_total_var = (std_r**2 + std_i**2)
         weight = np.square(self.S)[None, :]
         total_mu, total_var = weight * mu_energy_density, weight * std_energy_density
         total_mu, total_var = total_mu.sum(axis=-1), total_var.sum(axis=-1)
-        return total_mu, total_var, x_pred, total_var
+        frac_predictive = np.mean(normalized_total_var / (weight.sum() + 1e-30))
+        return total_mu, total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""

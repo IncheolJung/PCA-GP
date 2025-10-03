@@ -39,7 +39,7 @@ def configuration():
         help=f"type of angular sweep {sweeping_types}")
     parser.add_argument(
         "-F", "--freq", "--frequency-settings", nargs=3, 
-        default=["100", "300", "101"], 
+        default=["9500", "10500", "101"], 
         help=f"[start, end, number] of the frequency sweep")
     parser.add_argument(
         "-v", "--validate", action="store_true", 
@@ -61,14 +61,13 @@ def configuration():
         "-t", "--terms", dest="t", default="3", 
         help=f"number of terms [stacked-RBFP and LF-NSM]")
     parser.add_argument(
-        "-s", "--sample", "--sampling-strategy", dest="s", 
-        default="1", 
+        "-s", "--sample", "--sampling-strategy", dest="s", default="0", 
         help=f"type of sampling strategy {sampling_types}")
     parser.add_argument(
         "-i", "--max-iter", dest="i", default="20", 
         help=f"maximum iteration. maximum samples = n_init + max_iter")
     parser.add_argument(
-        "-T", "--tol", dest="tol", default="1e-5", 
+        "-T", "--tol", dest="tol", default="1e-3", 
         help=f"tolerance for varinace. terminates iteration if tol > var")
     return parser.parse_args()
 
@@ -147,28 +146,28 @@ def validate(*args):
 
 
 # --- angular PCA --- #
-# def export(file_path, np_data, freqs, theta, phi):
-#     def make_col(data): return " ".join(map(str, data))
-#     def make_row(data): return "\n".join(map(str, data))
-#     np_data_ravel = np_data.reshape(-1)
-#     angles = list(zip(theta, phi))
-#     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
-#     data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
-#             for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
-#     data = make_row([make_col(header), *data])
-#     return Path(file_path).open('w').write(data)
-
-
-# --- current PCA --- #
-def export(file_path, np_data, freqs, nodes):
+def export(file_path, np_data, freqs, theta, phi):
     def make_col(data): return " ".join(map(str, data))
     def make_row(data): return "\n".join(map(str, data))
     np_data_ravel = np_data.reshape(-1)
+    angles = list(zip(theta, phi))
     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
-    data = [make_col([f, n, np_data_ravel[i].real, np_data_ravel[i].imag]) 
-            for i, (f, n) in enumerate(product(freqs, nodes))]
+    data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+            for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
     data = make_row([make_col(header), *data])
     return Path(file_path).open('w').write(data)
+
+
+# # --- current PCA --- #
+# def export(file_path, np_data, freqs, nodes):
+#     def make_col(data): return " ".join(map(str, data))
+#     def make_row(data): return "\n".join(map(str, data))
+#     np_data_ravel = np_data.reshape(-1)
+#     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
+#     data = [make_col([f, n, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+#             for i, (f, n) in enumerate(product(freqs, nodes))]
+#     data = make_row([make_col(header), *data])
+#     return Path(file_path).open('w').write(data)
 
 
 def main():
@@ -206,18 +205,18 @@ def main():
     # SOLVER
     # -----------------------
 
-    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
-    workingpath = config.path
-    if workingpath is None:
-        workingpath = "./data/VWT-data/circylinder"
-        print(
-            "\n"*2, "#"*50, '\n', 
-            "WORKING_PATH not supplied. ", '\n',
-            "Fall back to default:", workingpath, '\n', 
-            "#"*50, "\n"*2,
-            )
+    # workingpath = config.path
+    # if workingpath is None:
+    #     workingpath = "./data/VWT-data/circylinder"
+    #     print(
+    #         "\n"*2, "#"*50, '\n', 
+    #         "WORKING_PATH not supplied. ", '\n',
+    #         "Fall back to default:", workingpath, '\n', 
+    #         "#"*50, "\n"*2,
+    #         )
 
     # solver = OnFlySolver(
     #     workingpath="./data/VWT-data/sphere",
@@ -245,24 +244,24 @@ def main():
     #     sweep_angle_type=sweep_type
     #     )
 
-    solver = OnFlySolverMyMoM(
-        workingpath="./data/MoM-data/spiral",
-        model_name="test"
-        )
+    # solver = OnFlySolverMyMoM(
+    #     workingpath="./data/MoM-data/csv256",
+    #     model_name="test"
+    #     )
 
     # -----------------------
     # GP TRAINER
     # -----------------------
-    from gp_sklearn import train_gp_sklearn as trainer
-    # from gp_Kenny import train_model_gp_Kenny as trainer
+    # from gp_sklearn import train_gp_sklearn as trainer
+    from gp_Kenny import train_model_gp_Kenny as trainer
     # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
 
     # -----------------------
     # GP MODEL
     # -----------------------
-    model = ReducedBasisGP1D
+    # model = ReducedBasisGP1D
     # model = ReducedBasisGP2D
-    # model = ReducedBasisGPMultiTask
+    model = ReducedBasisGPMultiTask
 
     # -----------------------
     # OUTPUT DRIECTORY SETUP
@@ -323,8 +322,8 @@ def main():
     stdout.flush()
 
     f_export = np.linspace(f_min, f_max, f_num)
-    # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
-    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.nodes)
+    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+    # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.nodes)
 
     if config.validate: 
         # f_test = np.linspace(f_min, f_max, 101)

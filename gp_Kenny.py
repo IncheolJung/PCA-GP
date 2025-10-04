@@ -104,7 +104,7 @@ class GPModel(gpytorch.models.ExactGP):
 def train_model_per_batch(
         train_x, train_y, terms, training_iter, 
         verbose, normalize_y, dims
-        ):
+        ) -> GPModel:
     from numpy import log10
 
     # --- Y-normalization --- #
@@ -141,31 +141,31 @@ def train_model_per_batch(
     # if hasattr(kernel, "outputscale"):
     #     kernel.outputscale = train_y.std() ** 2
 
-    lower_bound = 1e-10
+    lower_bound = 1e-12
     if train_y.ndim == 2 and train_y.shape[-1] > 1:
         # likelihood = gpytorch.likelihoods.FixedNoiseGaussianLikelihood(
         #     lower_bound * torch.ones_like(train_y)
         # ).double().to(device)
         likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
-            noise_prior=gpytorch.priors.LogNormalPrior(-18, 0.1),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-4, 1.0),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
             num_tasks=train_y.shape[-1],
         ).double().to(device)
         # likelihood.noise = 1e-3 * train_y.std() ** 2 # for example
-        # tasknoise = 1e-12 * torch.ones_like(likelihood.task_noises)
-        # likelihood.task_noises = tasknoise
-        # likelihood.task_noises = 1e-3 * train_y.std() ** 2
+        # likelihood.task_noises = 1e-8 * torch.ones_like(likelihood.task_noises)
+        likelihood.task_noises = 1e-2 * train_y.std() ** 2
         # likelihood.raw_noise.detach_()          # Freeze noise
         # likelihood.raw_task_noises.detach_()    # Freeze noise
         get_noise_bounds = lambda: f"{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}"
     else:
         likelihood = gpytorch.likelihoods.GaussianLikelihood(
-            noise_prior=gpytorch.priors.LogNormalPrior(-18, 0.1),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-4, 1.0),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
         ).double().to(device)
         # likelihood.noise_covar.initialize(noise=lower_bound)
         # likelihood.noise_covar.raw_noise.requires_grad_(False)  # freeze
-        # likelihood.noise = 1e-3 * train_y.std() ** 2
+        # likelihood.noise = 1e-8 * torch.ones_like(likelihood.noise)
+        likelihood.noise = 1e-2 * train_y.std() ** 2
         get_noise_bounds = lambda: f"{likelihood.noise[0]:.2e}"
 
     # model = GPModel(
@@ -351,3 +351,37 @@ def train_model_gp_Kenny(
     model_r, model_i = [train_model_per_batch(*b, *args) for b in train_batch]
 
     return model_r, model_i
+
+
+if __name__ == "__main__":
+
+    xtrain = torch.linspace(0, 5*torch.pi, 101)[:, None].to(device)
+    ytrain = torch.concatenate((3*torch.sin(xtrain), 0.8*torch.cos(xtrain)), dim=-1).to(device)
+
+    print(xtrain.shape)
+    print(ytrain.shape)
+
+    x_normalizer, x_denormalizer, x_denorm_std, _x_train_std = \
+        set_ynormalizer(xtrain, True)
+
+    model = train_model_per_batch(
+        x_normalizer(xtrain), ytrain, terms=5, training_iter=500, 
+        verbose = True, normalize_y = True, dims=1
+    )
+
+    xtest = torch.linspace(0, 5*torch.pi, 1501)[:, None].to(device)
+    ytest = torch.concatenate((3*torch.sin(xtest), 0.8*torch.cos(xtest)), dim=-1).detach().cpu().numpy()
+    mu, std = model.predict(x_normalizer(xtest).detach().cpu().numpy(), return_std=True)
+
+    xtest = xtest.detach().cpu().numpy().squeeze()
+
+    from matplotlib.pyplot import subplots, show as pltshow
+    hf, hx = subplots(figsize=(8,7), constrained_layout=True)
+    hx.plot(xtest, ytest[:, 0], "r-", lw=1)
+    hx.plot(xtest, ytest[:, 1], "b-", lw=1)
+    hx.plot(xtest, mu[:, 0], "r:", lw=3)
+    hx.plot(xtest, mu[:, 1], "b:", lw=3)
+    hx.fill_between(xtest, mu[:, 0]-0.5*std[:, 0], mu[:, 0]+0.5*std[:, 0], alpha=0.3, color="r")
+    hx.fill_between(xtest, mu[:, 1]-0.5*std[:, 1], mu[:, 1]+0.5*std[:, 1], alpha=0.3, color="b")
+    hf.show()
+    pltshow()

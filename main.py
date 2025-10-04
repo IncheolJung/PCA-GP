@@ -145,31 +145,31 @@ def validate(*args):
     return 0
 
 
-# --- angular PCA --- #
-def export(file_path, np_data, freqs, theta, phi):
-    def make_col(data): return " ".join(map(str, data))
-    def make_row(data): return "\n".join(map(str, data))
-    np_data_ravel = np_data.reshape(-1)
-    angles = list(zip(theta, phi))
-    header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
-    data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
-            for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
-    data = make_row([make_col(header), *data])
-    return Path(file_path).open('w').write(data)
-
-
-# # --- current PCA --- #
-# def export(file_path, np_data, freqs, nodes):
+# # --- angular PCA --- #
+# def export(file_path, np_data, freqs, theta, phi):
 #     def make_col(data): return " ".join(map(str, data))
 #     def make_row(data): return "\n".join(map(str, data))
-#     def parse_complex(data): return f"({data.real},{data.imag})"
-#     exitcode = []
-#     header = make_col([np_data.shape[-1], 1])
-#     for f, data in zip(freqs, np_data):
-#         data = list(map(parse_complex, data))
-#         data = make_row([header, *data])
-#         exitcode.append((Path(file_path)/f"{f}.mat").open('w').write(data))
-#     return any(exitcode)
+#     np_data_ravel = np_data.reshape(-1)
+#     angles = list(zip(theta, phi))
+#     header = ["Freq", "Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
+#     data = [make_col([f, th, ph, np_data_ravel[i].real, np_data_ravel[i].imag]) 
+#             for i, (f, (th, ph)) in enumerate(product(freqs, angles))]
+#     data = make_row([make_col(header), *data])
+#     return Path(file_path).open('w').write(data)
+
+
+# --- current PCA --- #
+def export(file_path, np_data, freqs, nodes):
+    def make_col(data): return " ".join(map(str, data))
+    def make_row(data): return "\n".join(map(str, data))
+    def parse_complex(data): return f"({data.real},{data.imag})"
+    exitcode = []
+    header = make_col([np_data.shape[-1], 1])
+    for f, data in zip(freqs, np_data):
+        data = list(map(parse_complex, data))
+        data = make_row([header, *data])
+        exitcode.append((Path(file_path)/f"{f}.mat").open('w').write(data))
+    return any(exitcode)
 
 
 def main():
@@ -207,7 +207,7 @@ def main():
     # SOLVER
     # -----------------------
 
-    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
     # workingpath = config.path
@@ -246,12 +246,12 @@ def main():
     #     sweep_angle_type=sweep_type
     #     )
 
-    # solver = OnFlySolverMyMoM(
-    #     workingpath="./data/MoM-data/csv256",
-    #     model_name="test"
-    #     )
-    # angles = solver.get_node_ids()
-    # a_min, a_max, a_num = np.min(angles), np.max(angles), len(angles)
+    solver = OnFlySolverMyMoM(
+        workingpath="./data/MoM-data/test",
+        model_name="test"
+        )
+    angles = solver.get_node_ids()
+    a_min, a_max, a_num = np.min(angles), np.max(angles), len(angles)
 
     # -----------------------
     # GP TRAINER
@@ -326,8 +326,8 @@ def main():
     stdout.flush()
 
     f_export = np.linspace(f_min, f_max, f_num)
-    export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
-    # export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
+    # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+    export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
 
     if config.validate: 
         # f_test = np.linspace(f_min, f_max, 101)

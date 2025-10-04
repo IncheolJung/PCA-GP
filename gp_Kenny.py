@@ -3,6 +3,7 @@ import torch, gpytorch
 import warnings
 from gpytorch.utils.warnings import GPInputWarning
 from torch.nn.utils import clip_grad_norm_
+import sys
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # device = 'cpu'
@@ -101,47 +102,14 @@ class GPModel(gpytorch.models.ExactGP):
         return prediction
 
 
-def train_model_per_batch(
-        train_x, train_y, terms, training_iter, 
-        verbose, normalize_y, dims
-        ) -> GPModel:
-    from numpy import log10
+def train_model_per_restart(
+        train_x: torch.Tensor, train_y: torch.Tensor, kernel, 
+        y_denormalizer, y_denorm_std, _y_train_std, 
+        training_iter, verbose
+    ):
 
-    # --- Y-normalization --- #
-    y_normalizer, y_denormalizer, y_denorm_std, _y_train_std = \
-        set_ynormalizer(train_y, normalize_y)
-    train_y = y_normalizer(train_y).detach()
-    # --- Y-normalization --- #
-
-    train_x = torch.squeeze(train_x, dim=-1).double().to(device)
-    train_y = torch.squeeze(train_y, dim=-1).double().to(device)
-    if train_x.ndim != train_y.ndim:
-        if (train_x.ndim==1 and train_y.ndim==2):
-            train_x = train_x.view(-1, 1)
-
-    # print(f"Report from gp_Kenny.train_model_per_batch")
-    # print("Input shapes:", train_x.shape, train_y.shape)
-
-    # kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
-    kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
-    # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
-    kernel = get_kernel(kern_sett).double().to(device)
-    # kernel = gpytorch.kernels.ScaleKernel(
-    #     gpytorch.kernels.RBFKernel()
-    #     ).double().to(device)
-    # if hasattr(kernel, "base_kernel"):
-    #     if hasattr(kernel.base_kernel, "lengthscale"):
-    #         kernel.base_kernel.lengthscale = train_x.std()  # for RBF-type kernels
-    #     if hasattr(kernel.base_kernel, "outputscale"):
-    #         kernel.base_kernel.outputscale = train_y.std() ** 2
-    # if hasattr(kernel, "lengthscale"):
-    #     kernel.lengthscale = train_x.std()  # for RBF-type kernels
-    # if hasattr(kernel, "outputscale"):
-    #     kernel.outputscale = train_y.std() ** 2
-
-    lower_bound = 1e-12
+    y_std = 1e-2 * train_y.std(dim=0, keepdim=True).detach()
+    lower_bound = min(1e-12, y_std.min())
     if train_y.ndim == 2 and train_y.shape[-1] > 1:
         # likelihood = gpytorch.likelihoods.FixedNoiseGaussianLikelihood(
         #     lower_bound * torch.ones_like(train_y)
@@ -153,7 +121,7 @@ def train_model_per_batch(
         ).double().to(device)
         # likelihood.noise = 1e-3 * train_y.std() ** 2 # for example
         # likelihood.task_noises = 1e-8 * torch.ones_like(likelihood.task_noises)
-        likelihood.task_noises = 1e-2 * train_y.std() ** 2
+        likelihood.task_noises = 1e-2 * y_std ** 2
         # likelihood.raw_noise.detach_()          # Freeze noise
         # likelihood.raw_task_noises.detach_()    # Freeze noise
         get_noise_bounds = lambda: f"{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}"
@@ -165,7 +133,7 @@ def train_model_per_batch(
         # likelihood.noise_covar.initialize(noise=lower_bound)
         # likelihood.noise_covar.raw_noise.requires_grad_(False)  # freeze
         # likelihood.noise = 1e-8 * torch.ones_like(likelihood.noise)
-        likelihood.noise = 1e-2 * train_y.std() ** 2
+        likelihood.noise = 1e-2 * y_std ** 2
         get_noise_bounds = lambda: f"{likelihood.noise[0]:.2e}"
 
     # model = GPModel(
@@ -213,14 +181,17 @@ def train_model_per_batch(
     #     {'params': unique(likelihood_params), 'lr': 1e-2},
     # ])
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=1.0, weight_decay=0
+        model.parameters(), lr=0.2, weight_decay=1e-6
     )
+    # optimizer = torch.optim.AdamW(
+    #     model.parameters(), lr=0.2, weight_decay=1e-6
+    # )
     mll = gpytorch.mlls.ExactMarginalLogLikelihood(
         likelihood, model
     ).to(device)
     # scheduler = None
     scheduler_class = torch.optim.lr_scheduler.OneCycleLR
-    scheduler = scheduler_class(optimizer, max_lr=1.0, total_steps=training_iter, anneal_strategy="linear")
+    scheduler = scheduler_class(optimizer, max_lr=0.2, total_steps=training_iter, anneal_strategy="linear")
     # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
     # scheduler = scheduler_class(
     #     optimizer, eta_min=1e-6, T_max=training_iter//3)
@@ -299,23 +270,95 @@ def train_model_per_batch(
         max_iter=fine_tuning_iter,
         history_size=10, line_search_fn="strong_wolfe"
         )
+    fine_tuned_loss = None
     def closure():
+        nonlocal fine_tuned_loss
         finetuner.zero_grad()
         # with gpytorch.settings.cholesky_jitter(1e-4):
         output = model(train_x)
-        loss = -mll(output, train_y).sum()
-        loss.backward()
+        fine_tuned_loss = -mll(output, train_y).sum()
+        fine_tuned_loss.backward()
         if verbose:
-            if loss.item()>1e3: loss_stdout = f"{loss.item():.4e}"
-            else: loss_stdout = f"{loss.item():.4f}"
+            if fine_tuned_loss.item()>1e3: loss_stdout = f"{fine_tuned_loss.item():.4e}"
+            else: loss_stdout = f"{fine_tuned_loss.item():.4f}"
             print(end_phrase, f"LBFGS loss: {loss_stdout}", 
-                  sep=tab, flush=True, end='\033[K\r')
-        return loss
-    finetuner.step(closure)
+                sep=tab, flush=True, end='\033[K\r')
+        return fine_tuned_loss
+    loss = finetuner.step(closure).item()
     # ------- Fine-tuning ------- 
 
-    if verbose:
-        print()
+    return model, fine_tuned_loss
+
+
+def train_model_per_batch(
+        train_x, train_y, terms, training_iter, 
+        verbose, normalize_y, dims
+        ) -> GPModel:
+    from numpy import log10
+
+    # --- Y-normalization --- #
+    y_normalizer, y_denormalizer, y_denorm_std, _y_train_std = \
+        set_ynormalizer(train_y, normalize_y)
+    train_y = y_normalizer(train_y).detach()
+    # --- Y-normalization --- #
+
+    train_x = torch.squeeze(train_x, dim=-1).double().to(device)
+    train_y = torch.squeeze(train_y, dim=-1).double().to(device)
+    if train_x.ndim != train_y.ndim:
+        if (train_x.ndim==1 and train_y.ndim==2):
+            train_x = train_x.view(-1, 1)
+
+    # print(f"Report from gp_Kenny.train_model_per_batch")
+    # print("Input shapes:", train_x.shape, train_y.shape)
+
+    # kern_sett = KernelSettings("Stacked_RBFP", nu=torch.inf, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("Stacked_LF_NSM", nu=0.5, terms=terms, dims=dims)
+    kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
+    # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
+    kernel = get_kernel(kern_sett).double().to(device)
+    # kernel = gpytorch.kernels.ScaleKernel(
+    #     gpytorch.kernels.RBFKernel()
+    #     ).double().to(device)
+    # if hasattr(kernel, "base_kernel"):
+    #     if hasattr(kernel.base_kernel, "lengthscale"):
+    #         kernel.base_kernel.lengthscale = train_x.std()  # for RBF-type kernels
+    #     if hasattr(kernel.base_kernel, "outputscale"):
+    #         kernel.base_kernel.outputscale = train_y.std() ** 2
+    # if hasattr(kernel, "lengthscale"):
+    #     kernel.lengthscale = train_x.std()  # for RBF-type kernels
+    # if hasattr(kernel, "outputscale"):
+    #     kernel.outputscale = train_y.std() ** 2
+
+    # --- random restarts --- #
+    best_loss = float("inf")
+    best_state = None
+
+    n_restarts = 5  # 5–10 is typical for small datasets
+    if verbose: print('\nGP_training_restarts....' * n_restarts)
+    for r in range(n_restarts):
+        line_num = n_restarts - r
+        if verbose: 
+            sys.stdout.write(f'\033[{line_num}A\r')
+        model, loss = train_model_per_restart(
+            train_x, train_y, kernel, 
+            y_denormalizer, y_denorm_std, _y_train_std, 
+            training_iter, verbose
+        )
+        if loss < best_loss:
+            best_loss = loss
+            best_state = {
+                "model": model.state_dict(),
+                "likelihood": model.likelihood.state_dict(),
+            }
+        if verbose:
+            sys.stdout.write(f'\033[{line_num}B\033[2K')
+            sys.stdout.write(f" # === Restart {r+1}: final loss {best_loss:.6f} === #")
+    if verbose: print()
+
+    # reload the best-performing model
+    model.load_state_dict(best_state["model"])
+    model.likelihood.load_state_dict(best_state["likelihood"])
 
     return model
 

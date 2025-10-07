@@ -3,6 +3,7 @@ import torch, gpytorch
 import warnings
 from gpytorch.utils.warnings import GPInputWarning
 from torch.nn.utils import clip_grad_norm_
+from linear_operator.utils.errors import NotPSDError
 import sys
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -340,11 +341,14 @@ def train_model_per_batch(
         line_num = n_restarts - r
         if verbose: 
             sys.stdout.write(f'\033[{line_num}A\r')
-        model, loss = train_model_per_restart(
-            train_x, train_y, kernel, 
-            y_denormalizer, y_denorm_std, _y_train_std, 
-            training_iter, verbose
-        )
+        try:
+            model, loss = train_model_per_restart(
+                train_x, train_y, kernel, 
+                y_denormalizer, y_denorm_std, _y_train_std, 
+                training_iter, verbose
+            )
+        except NotPSDError:
+            model, loss = None, float("inf")
         if loss < best_loss:
             best_loss = loss
             best_state = {
@@ -400,6 +404,7 @@ if __name__ == "__main__":
 
     xtrain = torch.linspace(0, 5*torch.pi, 101)[:, None].to(device)
     ytrain = torch.concatenate((3*torch.sin(xtrain), 0.8*torch.cos(xtrain)), dim=-1).to(device)
+    ytrain += 0.3 * torch.randn_like(ytrain)
 
     print(xtrain.shape)
     print(ytrain.shape)
@@ -408,7 +413,7 @@ if __name__ == "__main__":
         set_ynormalizer(xtrain, True)
 
     model = train_model_per_batch(
-        x_normalizer(xtrain), ytrain, terms=5, training_iter=500, 
+        x_normalizer(xtrain), ytrain, terms=2, training_iter=10, 
         verbose = True, normalize_y = True, dims=1
     )
 
@@ -419,12 +424,15 @@ if __name__ == "__main__":
     xtest = xtest.detach().cpu().numpy().squeeze()
 
     from matplotlib.pyplot import subplots, show as pltshow
-    hf, hx = subplots(figsize=(8,7), constrained_layout=True)
-    hx.plot(xtest, ytest[:, 0], "r-", lw=1)
-    hx.plot(xtest, ytest[:, 1], "b-", lw=1)
-    hx.plot(xtest, mu[:, 0], "r:", lw=3)
-    hx.plot(xtest, mu[:, 1], "b:", lw=3)
-    hx.fill_between(xtest, mu[:, 0]-0.5*std[:, 0], mu[:, 0]+0.5*std[:, 0], alpha=0.3, color="r")
-    hx.fill_between(xtest, mu[:, 1]-0.5*std[:, 1], mu[:, 1]+0.5*std[:, 1], alpha=0.3, color="b")
+    hf, hx = subplots(figsize=(8,4), constrained_layout=True)
+    hx.plot(xtest, ytest[:, 0], "r-", lw=1, label="Truth")
+    hx.plot(xtest, ytest[:, 1], "b-", lw=1, label="Truth")
+    hx.plot(xtest, mu[:, 0], "r:", lw=3, label="Prediction")
+    hx.plot(xtest, mu[:, 1], "b:", lw=3, label="Prediction")
+    hx.fill_between(xtest, mu[:, 0]-0.5*std[:, 0], mu[:, 0]+0.5*std[:, 0], alpha=0.3, color="r", label="STD")
+    hx.fill_between(xtest, mu[:, 1]-0.5*std[:, 1], mu[:, 1]+0.5*std[:, 1], alpha=0.3, color="b", label="STD")
+    hx.set_xmargin(0)
+    hf.legend()
     hf.show()
+    hf.savefig("GPR-example.png")
     pltshow()

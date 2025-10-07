@@ -1,0 +1,326 @@
+
+ ======  Simulation 80 Initialized  ====== 
+
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> Sampling strategy: latin-hyper-cube
+  >> n_init: 3
+  >> terms: 5
+  >> max_iter: 50
+  >> tol: 0.001
+  >> angles phi: [start, end, number] = (0, 300, 301)
+
+ ======  Simulation 80 Initialized  ====== 
+
+
+ ======  Adding Frequency Sample: 8.069e+08  ====== 
+
+number of basis updated: 3 -> 3
+S[0, r-1] =  0.014822234043037836 0.005915158394747548
+
+  >> Initial Frequencies: ['806871835.388', '982015137.653', '1349596291.995']
+
+
+Iteration 1 / 50: max_acquisition 0.0000538309 | pred_to_total_POD_energy_ratio 2.2685303361
+number of frequency samples: 3
+sampling new frequencies: [ 888761572.318 ]
+
+ ======  Adding Frequency Sample: 8.888e+08  ====== 
+
+number of basis updated: 3 -> 4
+S[0, r-1] =  0.01647440156542583 0.0021399325021497963
+
+Iteration 2 / 50: max_acquisition 0.0000226788 | pred_to_total_POD_energy_ratio 1.4357398367
+number of frequency samples: 4
+sampling new frequencies: [ 528149562.133 ]
+
+ ======  Adding Frequency Sample: 5.281e+08  ====== 
+
+number of basis updated: 4 -> 5
+S[0, r-1] =  0.016588233091803867 0.0017812567132543598
+
+Iteration 3 / 50: max_acquisition 0.0000227667 | pred_to_total_POD_energy_ratio 1.2710410877
+number of frequency samples: 5
+sampling new frequencies: [ 1473539644.391 ]
+number of basis updated: 5 -> 6
+S[0, r-1] =  0.016873874166957903 0.0015151713169693278
+
+Iteration 4 / 50: max_acquisition 0.0000110949 | pred_to_total_POD_energy_ratio 0.4932913325
+number of frequency samples: 6
+sampling new frequencies: [ 1297046179.135 ]
+number of basis updated: 6 -> 7
+S[0, r-1] =  0.01738129643273845 0.000286223834093985
+
+Iteration 5 / 50: max_acquisition 0.0000062535 | pred_to_total_POD_energy_ratio 0.2559351071
+number of frequency samples: 7
+sampling new frequencies: [ 648649348.230 ]
+
+ ======  Adding Frequency Sample: 6.486e+08  ====== 
+
+number of basis updated: 7 -> 8
+S[0, r-1] =  0.017844415902687864 0.00024893552857736226
+
+Iteration 6 / 50: max_acquisition 0.0000065786 | pred_to_total_POD_energy_ratio 0.4204397179
+number of frequency samples: 8
+sampling new frequencies: [ 1139911217.843 ]
+number of basis updated: 8 -> 9
+S[0, r-1] =  0.018750055222853453 0.0001723537601000678
+
+Iteration 7 / 50: max_acquisition 0.0000022656 | pred_to_total_POD_energy_ratio 0.2740756853
+number of frequency samples: 9
+sampling new frequencies: [ 614123827.937 ]
+
+ ======  Adding Frequency Sample: 6.141e+08  ====== 
+
+number of basis updated: 9 -> 10
+S[0, r-1] =  0.019327514295165927 2.2158602876099496e-05
+
+Iteration 8 / 50: max_acquisition 0.0000028278 | pred_to_total_POD_energy_ratio 0.1894640594
+number of frequency samples: 10
+sampling new frequencies: [ 1221167145.850 ]
+
+ ======  Adding Frequency Sample: 1.221e+09  ====== 
+
+number of basis updated: 10 -> 11
+S[0, r-1] =  0.02004256117605798 2.0538593131323013e-05
+
+Iteration 9 / 50: max_acquisition 0.0000010464 | pred_to_total_POD_energy_ratio 0.0751308170
+number of frequency samples: 11
+sampling new frequencies: [ 1057938388.935 ]
+number of basis updated: 11 -> 12
+S[0, r-1] =  0.02172208010987172 9.055165641926479e-06
+
+Iteration 10 / 50: max_acquisition 0.0000012168 | pred_to_total_POD_energy_ratio 0.1074948732
+number of frequency samples: 12
+sampling new frequencies: [ 724972686.710 ]
+
+ ======  Adding Frequency Sample: 7.250e+08  ====== 
+
+number of basis updated: 12 -> 13
+S[0, r-1] =  0.022045631360009272 1.7709218231977732e-06
+
+Iteration 11 / 50: max_acquisition 0.0000019408 | pred_to_total_POD_energy_ratio 0.1748079892
+number of frequency samples: 13
+sampling new frequencies: [ 1419534495.303 ]
+number of basis updated: 13 -> 14
+S[0, r-1] =  0.022634773225717372 9.328063768555695e-07
+
+Iteration 12 / 50: max_acquisition 0.0000010042 | pred_to_total_POD_energy_ratio 0.1060972252
+number of frequency samples: 14
+sampling new frequencies: [ 504600576.853 ]
+number of basis updated: 14 -> 14
+S[0, r-1] =  0.022832297787001056 1.7889423379883507e-06
+S[r] = 7.42481953311834e-08
+
+Iteration 13 / 50: max_acquisition 0.0000009124 | pred_to_total_POD_energy_ratio 0.1113227589
+number of frequency samples: 15
+sampling new frequencies: [ 1497473940.442 ]
+number of basis updated: 14 -> 15
+S[0, r-1] =  0.023463848373759175 3.7453363563041233e-07
+S[r] = 4.6401565964421474e-08
+
+Iteration 14 / 50: max_acquisition 0.0000007061 | pred_to_total_POD_energy_ratio 0.1103545146
+number of frequency samples: 16
+sampling new frequencies: [ 933882712.144 ]
+
+ ======  Adding Frequency Sample: 9.339e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.024505844053273246 4.077077360055298e-07
+S[r] = 7.705969478537695e-08
+
+Iteration 15 / 50: max_acquisition 0.0000002787 | pred_to_total_POD_energy_ratio 0.0542160712
+number of frequency samples: 17
+sampling new frequencies: [ 516363810.782 ]
+
+ ======  Adding Frequency Sample: 5.164e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.024693967233214195 4.1039113013648065e-07
+S[r] = 7.814073651179529e-08
+
+Iteration 16 / 50: max_acquisition 0.0000001908 | pred_to_total_POD_energy_ratio 0.0171996300
+number of frequency samples: 18
+sampling new frequencies: [ 1096142490.922 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.02586803999440991 6.616567649110505e-07
+S[r] = 8.496184450609104e-08
+
+Iteration 17 / 50: max_acquisition 0.0000001434 | pred_to_total_POD_energy_ratio 0.0133506835
+number of frequency samples: 19
+sampling new frequencies: [ 768874701.516 ]
+
+ ======  Adding Frequency Sample: 7.689e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.026119149066354864 6.621919967402444e-07
+S[r] = 9.20351801491542e-08
+
+Iteration 18 / 50: max_acquisition 0.0000010757 | pred_to_total_POD_energy_ratio 0.0742106989
+number of frequency samples: 20
+sampling new frequencies: [ 1178270116.013 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.026869603786471928 6.747241519916793e-07
+S[r] = 9.581519260427738e-08
+
+Iteration 19 / 50: max_acquisition 0.0000008867 | pred_to_total_POD_energy_ratio 0.0499237642
+number of frequency samples: 21
+sampling new frequencies: [ 851386349.443 ]
+
+ ======  Adding Frequency Sample: 8.514e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.027606805018846315 6.842369658576279e-07
+S[r] = 1.024723694704917e-07
+
+Iteration 20 / 50: max_acquisition 0.0000011832 | pred_to_total_POD_energy_ratio 0.1093847239
+number of frequency samples: 22
+sampling new frequencies: [ 1243047603.594 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.0281866167847138 7.136786116480275e-07
+S[r] = 1.03101581009587e-07
+
+Iteration 21 / 50: max_acquisition 0.0000010950 | pred_to_total_POD_energy_ratio 0.0848145093
+number of frequency samples: 23
+sampling new frequencies: [ 1015213920.566 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.030056443668998522 7.20734153105821e-07
+S[r] = 1.1570768304975437e-07
+
+Iteration 22 / 50: max_acquisition 0.0000018516 | pred_to_total_POD_energy_ratio 0.1724527363
+number of frequency samples: 24
+sampling new frequencies: [ 576651663.947 ]
+
+ ======  Adding Frequency Sample: 5.767e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.030245863387446174 7.207740901370203e-07
+S[r] = 1.189812780605291e-07
+
+Iteration 23 / 50: max_acquisition 0.0000013925 | pred_to_total_POD_energy_ratio 0.1138389278
+number of frequency samples: 25
+sampling new frequencies: [ 687977071.072 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.030551687501840282 7.311237941579941e-07
+S[r] = 1.2373785593082944e-07
+
+Iteration 24 / 50: max_acquisition 0.0000012301 | pred_to_total_POD_energy_ratio 0.0968742110
+number of frequency samples: 26
+sampling new frequencies: [ 1392567094.659 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.030978709845570808 7.401022769158774e-07
+S[r] = 1.261074547495077e-07
+
+Iteration 25 / 50: max_acquisition 0.0000008875 | pred_to_total_POD_energy_ratio 0.1257240239
+number of frequency samples: 27
+sampling new frequencies: [ 1266628362.515 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03149785935038851 7.454596210948616e-07
+S[r] = 1.2864173353491727e-07
+
+Iteration 26 / 50: max_acquisition 0.0000004220 | pred_to_total_POD_energy_ratio 0.0694919100
+number of frequency samples: 28
+sampling new frequencies: [ 1438751484.219 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03193933906916792 7.489730675830178e-07
+S[r] = 1.3482184000753197e-07
+
+Iteration 27 / 50: max_acquisition 0.0000001809 | pred_to_total_POD_energy_ratio 0.0374174250
+number of frequency samples: 29
+sampling new frequencies: [ 908498617.632 ]
+
+ ======  Adding Frequency Sample: 9.085e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03261859133958749 7.604419582391607e-07
+S[r] = 1.3491808331426916e-07
+
+Iteration 28 / 50: max_acquisition 0.0000001245 | pred_to_total_POD_energy_ratio 0.0358773443
+number of frequency samples: 30
+sampling new frequencies: [ 1122166028.914 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03343058551759122 7.607743713452723e-07
+S[r] = 1.3722772264234658e-07
+
+Iteration 29 / 50: max_acquisition 0.0000001234 | pred_to_total_POD_energy_ratio 0.0084878629
+number of frequency samples: 31
+sampling new frequencies: [ 1324520631.267 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.0339460515597165 7.839536055864554e-07
+S[r] = 1.3725768930864354e-07
+
+Iteration 30 / 50: max_acquisition 0.0000001629 | pred_to_total_POD_energy_ratio 0.0130321844
+number of frequency samples: 32
+sampling new frequencies: [ 973469665.767 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03494968262769222 7.959250323167406e-07
+S[r] = 1.393535056609394e-07
+
+Iteration 31 / 50: max_acquisition 0.0000001599 | pred_to_total_POD_energy_ratio 0.0534789486
+number of frequency samples: 33
+sampling new frequencies: [ 822323973.524 ]
+
+ ======  Adding Frequency Sample: 8.223e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03561351555936493 7.990678216138832e-07
+S[r] = 1.4104258389106646e-07
+
+Iteration 32 / 50: max_acquisition 0.0000007104 | pred_to_total_POD_energy_ratio 0.1071465178
+number of frequency samples: 34
+sampling new frequencies: [ 552397718.285 ]
+
+ ======  Adding Frequency Sample: 5.524e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03574616983804462 8.144614774020809e-07
+S[r] = 1.4163365549003593e-07
+
+Iteration 33 / 50: max_acquisition 0.0000003700 | pred_to_total_POD_energy_ratio 0.0846157071
+number of frequency samples: 35
+sampling new frequencies: [ 746178036.213 ]
+
+ ======  Adding Frequency Sample: 7.462e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.035894304320335906 8.222858198081273e-07
+S[r] = 1.416816064997978e-07
+
+Iteration 34 / 50: max_acquisition 0.0000002858 | pred_to_total_POD_energy_ratio 0.0254190995
+number of frequency samples: 36
+sampling new frequencies: [ 1371810621.494 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.036306430140961084 8.229585365972605e-07
+S[r] = 1.4579731063919142e-07
+
+Iteration 35 / 50: max_acquisition 0.0000003909 | pred_to_total_POD_energy_ratio 0.1305137667
+number of frequency samples: 37
+sampling new frequencies: [ 1035712651.127 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03764815491636709 8.405767792647217e-07
+S[r] = 1.4601608590194098e-07
+
+Iteration 36 / 50: max_acquisition 0.0000006953 | pred_to_total_POD_energy_ratio 0.1973312708
+number of frequency samples: 38
+sampling new frequencies: [ 659071066.858 ]
+
+ ======  Adding Frequency Sample: 6.591e+08  ====== 
+
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.037901297063128676 8.422034618398587e-07
+S[r] = 1.4652764839544185e-07
+
+Iteration 37 / 50: max_acquisition 0.0000003728 | pred_to_total_POD_energy_ratio 0.0469271410
+number of frequency samples: 39
+sampling new frequencies: [ 1198602677.634 ]
+number of basis updated: 15 -> 15
+S[0, r-1] =  0.03838549580687415 8.422369350768469e-07
+S[r] = 1.5032786089850536e-07
+
+Iteration 38 / 50: max_acquisition 0.0000002951 | pred_to_total_POD_energy_ratio 0.0518584929
+number of frequency samples: 40
+sampling new frequencies: [ 864195316.858 ]
+
+ ======  Adding Frequency Sample: 8.642e+08  ====== 
+

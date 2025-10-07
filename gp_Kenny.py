@@ -121,7 +121,7 @@ def train_model_per_restart(
         ).double().to(device)
         # likelihood.noise = 1e-3 * train_y.std() ** 2 # for example
         # likelihood.task_noises = 1e-8 * torch.ones_like(likelihood.task_noises)
-        likelihood.task_noises = 1e-2 * y_std ** 2
+        # likelihood.task_noises = 1e-2 * y_std ** 2
         # likelihood.raw_noise.detach_()          # Freeze noise
         # likelihood.raw_task_noises.detach_()    # Freeze noise
         get_noise_bounds = lambda: f"{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}"
@@ -133,7 +133,7 @@ def train_model_per_restart(
         # likelihood.noise_covar.initialize(noise=lower_bound)
         # likelihood.noise_covar.raw_noise.requires_grad_(False)  # freeze
         # likelihood.noise = 1e-8 * torch.ones_like(likelihood.noise)
-        likelihood.noise = 1e-2 * y_std ** 2
+        # likelihood.noise = 1e-2 * y_std ** 2
         get_noise_bounds = lambda: f"{likelihood.noise[0]:.2e}"
 
     # model = GPModel(

@@ -256,16 +256,16 @@ def main():
     # -----------------------
     # GP TRAINER
     # -----------------------
-    # from gp_sklearn import train_gp_sklearn as trainer
-    from gp_Kenny import train_model_gp_Kenny as trainer
+    from gp_sklearn import train_gp_sklearn as trainer
+    # from gp_Kenny import train_model_gp_Kenny as trainer
     # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
 
     # -----------------------
     # GP MODEL
     # -----------------------
-    # model = ReducedBasisGP1D
+    model = ReducedBasisGP1D
     # model = ReducedBasisGP2D
-    model = ReducedBasisGPMultiTask
+    # model = ReducedBasisGPMultiTask
 
     # -----------------------
     # OUTPUT DRIECTORY SETUP

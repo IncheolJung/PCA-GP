@@ -3,7 +3,8 @@ import torch, gpytorch
 import warnings
 from gpytorch.utils.warnings import GPInputWarning
 from torch.nn.utils import clip_grad_norm_
-from linear_operator.utils.errors import NotPSDError
+from linear_operator.utils.errors import NotPSDError, NanError
+from numpy.random import uniform
 import sys
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -110,7 +111,7 @@ def train_model_per_restart(
     ):
 
     y_std = 1e-2 * train_y.std(dim=0, keepdim=True).detach()
-    lower_bound = min(1e-12, y_std.min())
+    lower_bound = min(1e-12, y_std.min().item())
     if train_y.ndim == 2 and train_y.shape[-1] > 1:
         # likelihood = gpytorch.likelihoods.FixedNoiseGaussianLikelihood(
         #     lower_bound * torch.ones_like(train_y)
@@ -181,8 +182,11 @@ def train_model_per_restart(
     #     {'params': unique(coregion_params),   'lr': 5e-3},
     #     {'params': unique(likelihood_params), 'lr': 1e-2},
     # ])
+
+    train_lr = uniform(0.2, 0.6)
+
     optimizer = torch.optim.Adam(
-        model.parameters(), lr=0.2, weight_decay=1e-6
+        model.parameters(), lr=train_lr, weight_decay=1e-6
     )
     # optimizer = torch.optim.AdamW(
     #     model.parameters(), lr=0.2, weight_decay=1e-6
@@ -192,7 +196,7 @@ def train_model_per_restart(
     ).to(device)
     # scheduler = None
     scheduler_class = torch.optim.lr_scheduler.OneCycleLR
-    scheduler = scheduler_class(optimizer, max_lr=0.2, total_steps=training_iter, anneal_strategy="linear")
+    scheduler = scheduler_class(optimizer, max_lr=train_lr, total_steps=training_iter, anneal_strategy="linear")
     # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
     # scheduler = scheduler_class(
     #     optimizer, eta_min=1e-6, T_max=training_iter//3)
@@ -263,7 +267,7 @@ def train_model_per_restart(
     fine_tuning_iter = max(50, training_iter // 10)
     # fine_tuning_iter = training_iter - i + 21
     # fine_tuning_lr   = 2*scheduler.get_last_lr()[0]    # 2*last_lr
-    fine_tuning_lr   = 0.1
+    fine_tuning_lr   = train_lr
     # end_phrase = f"Training.... "
     # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
     finetuner = torch.optim.LBFGS(
@@ -277,7 +281,7 @@ def train_model_per_restart(
         finetuner.zero_grad()
         # with gpytorch.settings.cholesky_jitter(1e-4):
         output = model(train_x)
-        fine_tuned_loss = -mll(output, train_y).sum()
+        fine_tuned_loss = -mll(output, train_y)
         fine_tuned_loss.backward()
         if verbose:
             if fine_tuned_loss.item()>1e3: loss_stdout = f"{fine_tuned_loss.item():.4e}"
@@ -285,7 +289,8 @@ def train_model_per_restart(
             print(end_phrase, f"LBFGS loss: {loss_stdout}", 
                 sep=tab, flush=True, end='\033[K\r')
         return fine_tuned_loss
-    loss = finetuner.step(closure).item()
+    with torch.no_grad():
+        loss = finetuner.step(closure).item()
     # ------- Fine-tuning ------- 
 
     return model, fine_tuned_loss
@@ -317,7 +322,7 @@ def train_model_per_batch(
     kern_sett = KernelSettings("LF_NSM", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBFP", nu=0.5, terms=terms, dims=dims)
     # kern_sett = KernelSettings("RBF", nu=0.5, terms=terms, dims=dims)
-    kernel = get_kernel(kern_sett).double().to(device)
+    # kernel = get_kernel(kern_sett).double().to(device)
     # kernel = gpytorch.kernels.ScaleKernel(
     #     gpytorch.kernels.RBFKernel()
     #     ).double().to(device)
@@ -342,12 +347,13 @@ def train_model_per_batch(
         if verbose: 
             sys.stdout.write(f'\033[{line_num}A\r')
         try:
+            kernel = get_kernel(kern_sett).double().to(device)
             model, loss = train_model_per_restart(
-                train_x, train_y, kernel, 
+                train_x.detach(), train_y.detach(), kernel, 
                 y_denormalizer, y_denorm_std, _y_train_std, 
                 training_iter, verbose
             )
-        except NotPSDError:
+        except (NotPSDError, NanError):
             model, loss = None, float("inf")
         if loss < best_loss:
             best_loss = loss

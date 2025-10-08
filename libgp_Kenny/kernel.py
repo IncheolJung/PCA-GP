@@ -114,7 +114,7 @@ class NSMKernel:
                 if param in std_constraints: constraint = std_constraints[param]
                 self.register_parameter(
                     name=f"raw_std_{param}",
-                    parameter=torch.nn.Parameter(init_std_func*torch.ones(*(self.batch_shape + shape), dtype=torch.float64))
+                    parameter=torch.nn.Parameter(init_std_func*torch.rand(*(self.batch_shape + shape), dtype=torch.float64))
                 )
                 self.register_constraint(f"raw_std_{param}", constraint)
 
@@ -124,7 +124,7 @@ class NSMKernel:
                 if param in covar_constraints: constraint = covar_constraints[param]
                 self.register_parameter(
                     name=f"raw_covar_{param}",
-                    parameter=torch.nn.Parameter(init_covar_func*torch.ones(*(self.batch_shape + shape), dtype=torch.float64))
+                    parameter=torch.nn.Parameter(init_covar_func*torch.rand(*(self.batch_shape + shape), dtype=torch.float64))
                 )
                 self.register_constraint(f"raw_covar_{param}", constraint)
 

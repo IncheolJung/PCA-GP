@@ -361,7 +361,7 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
 
         gp_r, gp_i = self.train_gp(
             x_train, y_train, terms=self.terms, 
-            training_iter=min(100*self.r, 500), 
+            training_iter=min(50*self.r, 300), 
             verbose=self.verbose, normalize_y=self.normalizeY, 
             dims = x_train.shape[-1]
             )

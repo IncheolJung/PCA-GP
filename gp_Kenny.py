@@ -102,12 +102,10 @@ class GPModel(gpytorch.models.ExactGP):
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Output shape:", ypred.shape)
         return prediction
+    
 
-
-def train_model_per_restart(
-        train_x: torch.Tensor, train_y: torch.Tensor, kernel, 
-        y_denormalizer, y_denorm_std, _y_train_std, 
-        training_iter, verbose
+def build_model(
+        train_x, train_y, kernel, y_denormalizer, y_denorm_std, _y_train_std
     ):
 
     y_std = 1e-2 * train_y.std(dim=0, keepdim=True).detach()
@@ -152,6 +150,20 @@ def train_model_per_restart(
     if train_y.ndim == 2 and train_y.shape[-1] > 1:
         # print(f"Setting multitask {train_y.shape[-1]}")
         model.make_multitask(train_y.shape[-1])
+    return model, get_noise_bounds
+
+
+def train_model_per_restart(
+        train_x: torch.Tensor, train_y: torch.Tensor, kernel, 
+        y_denormalizer, y_denorm_std, _y_train_std, 
+        training_iter, verbose
+    ):
+
+    model, get_noise_bounds = build_model(
+        train_x, train_y, kernel, y_denormalizer, y_denorm_std, _y_train_std
+    )
+
+    likelihood = model.likelihood
     
     # model.make_multitask(train_y.shape[-1])
     
@@ -365,6 +377,12 @@ def train_model_per_batch(
             sys.stdout.write(f'\033[{line_num}B\033[2K')
             sys.stdout.write(f" # === Restart {r+1}: final loss {best_loss:.6f} === #")
     if verbose: print()
+
+    if model is None:
+        model, _ = build_model(
+                train_x.detach(), train_y.detach(), kernel,
+                y_denormalizer, y_denorm_std, _y_train_std
+            )
 
     # reload the best-performing model
     model.load_state_dict(best_state["model"])

@@ -7,6 +7,14 @@ from itertools import product
 from datareader import *
 from ReducedBasisGP import *
 
+try:
+    from libmpi.libmpi import *
+    usempi=True
+except ImportError:
+    print("mpi4py NOT DETECTED!")
+    print("Falls back to OpenMP version")
+    usempi=False
+
 
 def configuration():
     from argparse import ArgumentParser

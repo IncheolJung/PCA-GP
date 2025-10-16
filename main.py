@@ -9,10 +9,15 @@ from ReducedBasisGP import *
 
 try:
     from libmpi.libmpi import *
-    usempi=True
+    if size==1:
+        usempi=False
+    else:
+        if rank==0:
+            print("USING MPI: mpi4py backend", end='\n\n')
+        usempi=True
 except ImportError:
     print("mpi4py NOT DETECTED!")
-    print("Falls back to OpenMP version")
+    print("Falls back to OpenMP version", end='\n\n')
     usempi=False
 
 
@@ -218,15 +223,16 @@ def main():
     # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
-    # workingpath = config.path
-    # if workingpath is None:
-    #     workingpath = "./data/VWT-data/circylinder"
-    #     print(
-    #         "\n"*2, "#"*50, '\n', 
-    #         "WORKING_PATH not supplied. ", '\n',
-    #         "Fall back to default:", workingpath, '\n', 
-    #         "#"*50, "\n"*2,
-    #         )
+    workingpath = config.path
+    if workingpath is None:
+        workingpath = "./data/VWT-data/circylinder"
+        if (not usempi) or (usempi and rank==0):
+            print(
+                "\n"*2, "#"*50, '\n', 
+                "WORKING_PATH not supplied. ", '\n',
+                "Fall back to default:", workingpath, '\n', 
+                "#"*50, "\n"*2,
+                )
 
     # solver = OnFlySolver(
     #     workingpath="./data/VWT-data/sphere",
@@ -247,19 +253,20 @@ def main():
     #     sweep_angle_type=1
     #     )
 
-    # solver = OnFlySolver(
-    #     workingpath=workingpath,
-    #     model_name=config.model,
-    #     angles=angles, 
-    #     sweep_angle_type=sweep_type
-    #     )
-
-    solver = OnFlySolverMyMoM(
-        workingpath="./data/MoM-data/spiral-theta90",
-        model_name="test"
+    solver = OnFlySolver(
+        workingpath=workingpath,
+        model_name=config.model,
+        angles=angles, 
+        sweep_angle_type=sweep_type,
+        usempi=usempi, mpicomm=comm
         )
-    angles = solver.get_node_ids()
-    a_min, a_max, a_num = np.min(angles), np.max(angles), len(angles)
+
+    # solver = OnFlySolverMyMoM(
+    #     workingpath="./data/MoM-data/spiral-theta90",
+    #     model_name="test", usempi=usempi
+    #     )
+    # angles = solver.get_node_ids()
+    # a_min, a_max, a_num = np.min(angles), np.max(angles), len(angles)
 
     # -----------------------
     # GP TRAINER
@@ -278,23 +285,24 @@ def main():
     # -----------------------
     # OUTPUT DRIECTORY SETUP
     # -----------------------
-    dir_out = Path("out")
-    simulation_number = len([d for d in dir_out.glob("*") if d.is_dir()]) + 1
-    dir_out = dir_out/Path(f"GP_test_{simulation_number:04d}")
-    dir_out.mkdir()
-    stdout = Tee(dir_out/"GP_results.log", "w")     # Log file setup
-    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
-    print(f"  >> Adaptive basis: {adaptive_basis}")
-    print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
-    print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")
-    print(f"  >> Sampling strategy: {sampling_type_candidate[sampling_type]}")
-    print(f"  >> n_init: {n_init}")
-    print(f"  >> terms: {terms}")
-    print(f"  >> max_iter: {max_iter}")
-    print(f"  >> tol: {tol}")
-    print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {a_min, a_max, a_num}")
-    print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
-    stdout.flush()
+    if (not usempi) or (usempi and rank==0):
+        dir_out = Path("out")
+        simulation_number = len([d for d in dir_out.glob("*") if d.is_dir()]) + 1
+        dir_out = dir_out/Path(f"GP_test_{simulation_number:04d}")
+        dir_out.mkdir()
+        stdout = Tee(dir_out/"GP_results.log", "w")     # Log file setup
+        print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
+        print(f"  >> Adaptive basis: {adaptive_basis}")
+        print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
+        print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")
+        print(f"  >> Sampling strategy: {sampling_type_candidate[sampling_type]}")
+        print(f"  >> n_init: {n_init}")
+        print(f"  >> terms: {terms}")
+        print(f"  >> max_iter: {max_iter}")
+        print(f"  >> tol: {tol}")
+        print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {a_min, a_max, a_num}")
+        print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
+        stdout.flush()
     # -----------------------
     # BEGIN
     # -----------------------
@@ -307,7 +315,8 @@ def main():
         solver, trainer, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
         acquisition_type=acquisition_function, 
         Xnormalizer_type=Xnormalizer_type, normalizeY=True, 
-        terms=terms, verbose=True
+        terms=terms, verbose=True,
+        usempi=usempi, mpicomm=comm
     )
     rbgp.initialize(f_min=f_min, f_max=f_max, sampling_strategy=sampling_type)
     make_pretty_number = lambda freq: str(round(freq, 3))
@@ -315,32 +324,46 @@ def main():
     print(f"\n  >> Initial Frequencies: {pretty_number}\n")
 
     # max_iter = len(f_test) - n_init
+    break_token = False
     for it in range(max_iter):  # 5 adaptive iterations
         f_next, ac_fx, POD_energy = \
             rbgp.acquisition_next_frequency(f_min, f_max, f_num, int(config.add))
-        print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | pred_to_total_POD_energy_ratio {POD_energy:.10f}")
-        print("number of frequency samples:", len(rbgp.freqs))
-        if POD_energy < tol: 
-            break
-        f_next_str = " ".join(["[", *[f"{f:.3f}" for f in f_next], "]"])
-        print(f"sampling new frequencies:", f_next_str)
-        rbgp.update(f_next)
+        if (not usempi) or (usempi and rank==0):
+            print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | pred_to_total_POD_energy_ratio {POD_energy:.10f}")
+            print("number of frequency samples:", len(rbgp.freqs))
+            if POD_energy < tol: 
+                break_token = True
+            f_next_str = " ".join(["[", *[f"{f:.3f}" for f in f_next], "]"])
+            print(f"sampling new frequencies:", f_next_str)
+            # rbgp.update(f_next)
+            stdout.flush()
+        
+        if usempi:
+            comm.Barrier()
+            break_token.bcast(break_token, root=0)
+            break_token.bcast(f_next, root=0)
+        
+        if break_token: break
+
+        y_new = solver(f_next)
+        rbgp.update(f_next, y_new)
+    
+    if (not usempi) or (usempi and rank==0):
+        print("\n ======  Stopping criterion met.  ====== \n")
+        print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
+        print("  >> Final acquisition:", max(ac_fx), sep="\t")
+        print("  >> Final pred_to_total_POD_energy_ratio:", POD_energy, sep="\t")
+        print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
         stdout.flush()
-    print("\n ======  Stopping criterion met.  ====== \n")
-    print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
-    print("  >> Final acquisition:", max(ac_fx), sep="\t")
-    print("  >> Final pred_to_total_POD_energy_ratio:", POD_energy, sep="\t")
-    print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
-    stdout.flush()
 
-    f_export = np.linspace(f_min, f_max, f_num)
-    # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
-    export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
+        f_export = np.linspace(f_min, f_max, f_num)
+        # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+        export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
 
-    if config.validate: 
-        # f_test = np.linspace(f_min, f_max, 101)
-        f_test = np.linspace(f_min, f_max, f_num)
-        validate(rbgp, f_test, solver, stdout, dir_out)
+        if config.validate: 
+            # f_test = np.linspace(f_min, f_max, 101)
+            f_test = np.linspace(f_min, f_max, f_num)
+            validate(rbgp, f_test, solver, stdout, dir_out)
 
     # pltshow()
     return 0

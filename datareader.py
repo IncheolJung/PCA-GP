@@ -81,8 +81,17 @@ class OnFlySolver:
             init_freqs: list = [], 
             angles = np.linspace(0, 180, 181),
             sweep_angle_type = 0,
-            precision: int = 3
+            precision: int = 3,
+            usempi=False, mpicomm=None,
             ):
+
+        self.usempi = usempi
+        if usempi:
+            self.comm = mpicomm
+            self.rank = mpicomm.Get_rank()
+            self.size = mpicomm.Get_size()
+            print(f"[Rank {self.rank}] starting work...")
+
         "sweep_angle_type: [0, 1] = [phi, theta]"
         self.workingpath = Path(workingpath).absolute().__str__()
         if model_name is None:
@@ -112,29 +121,9 @@ class OnFlySolver:
         self.n_angles = len(angles)
         self.encoder = lambda x: round(float(x), precision)
         self.farfields = {}         # keys: (freq, angle), values: (cpol, xpol)
-        self._init_in_file()        # init .in with dummy freq
+        if (not usempi) or (usempi and self.rank==0):
+            self._init_in_file()        # init .in with dummy freq
         self.tmp = {}               # tmp directories for simulations
-
-        if len(self.freqs) > 0:
-            if len(self.freqs) > 1: # parallel if multiple freq
-                _run_one = lambda f: self.run(f)
-                freq_to_run = []
-                for freq in self.freqs:
-                    if (self._is_data_exist(freq)): pass
-                    else: freq_to_run.append(freq)
-                results = Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
-                    delayed(_run_one)(f) for f in range(freq_to_run)
-                )
-                broken_runs = {i: r for i,r in enumerate(results) if r != 0}
-                if len(broken_runs): 
-                    raise RuntimeError(f"Simulations broken: {broken_runs}")
-            else:       # sequential if one freq
-                for freq in self.freqs:
-                    self.__call__(freq, self.angles[0])
-
-        # if len(self.freqs) > 0:
-        #     for freq in self.freqs:
-        #         self.__call__(freq, self.angles[0])
 
         def get_freqs_from_dir(workingpath):
             def rm_r(path: Path):
@@ -150,19 +139,48 @@ class OnFlySolver:
                     try: freqs.append(float(d.name))
                     except ValueError: rm_r(d)
             return freqs
-        freqs_computed_before = get_freqs_from_dir(workingpath)
+        if usempi:
+            if self.rank == 0:
+                freqs_computed_before = get_freqs_from_dir(workingpath)
+            else:
+                freqs_computed_before = None
+            freqs_computed_before = self.comm.bcast(freqs_computed_before, root=0)
+        else:
+            freqs_computed_before = get_freqs_from_dir(workingpath)
         if len(freqs_computed_before) > 0:
             for freq in freqs_computed_before:
                 self._load_farfield_data(f"{self.workingpath}/{freq}/{self.model_name}.efar")
-            self.freqs.extend(list(sorted(freqs_computed_before)))
+        
+        # if usempi:
+        #     self.comm.Barrier()
+        #     print(f"[Rank {self.rank}] waiting other ranks...")
+
+        # self.__call__(self.freqs, self.angles)
+
+        if usempi:
+            self.comm.Barrier()
+            print(f"[Rank {self.rank}] finished data loading")
+
+            results = self.__call__mpi(self.freqs, self.angles)
+        else:
+            results = self.__call__(self.freqs, self.angles)
+
+        if usempi:
+            self.comm.Barrier()
+            print(f"[Rank {self.rank}] all simulations done")
 
         return None
     
-    def __call__(self, freq, angle, delay=0):
+    def __call__(self, *args, **kwargs):
+        if self.usempi:
+            return self.__call__mpi(*args, **kwargs)
+        else:
+            return self.__call__openmp(*args, **kwargs)
+    
+    def __call__openmp(self, freq, angle, delay=0):
         # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
         #             delayed(_run_one)(f) for f in range(freq_to_run)
         #         )
-        time.sleep(delay)
         if isinstance(freq, Iterable):
             # return np.array([self.__call__(f, angle) for f in freq])
             results = Parallel(n_jobs=4, backend="loky")(
@@ -180,27 +198,137 @@ class OnFlySolver:
             freq, angle = self.encoder(freq), self.encoder(angle)
             if (self._is_data_exist(freq)): pass
             else: 
-                exit = self.run(freq)
-                if exit != 0:
-                    raise RuntimeError(f"simulation error exit {exit}")
-            # if ((freq, angle) not in self.farfields.keys()) :
-            #     print(f"warning: (freq, angle) = ({freq}, {angle}) not found in self.farfields.keys()")
-            #     print("type(freq):", type(freq))
-            #     print("type(angle):", type(angle))
-            #     freq_key, angle_key = list(self.farfields.keys())[0]
-            #     print(f"(freq_key, angle_key) = ({freq_key}, {angle_key})")
-            #     print("type(freq_key):", type(freq_key))
-            #     print("type(angle_key):", type(angle_key))
-            #     self.run(freq)
+                exit_code = self.run(freq)
+                if exit_code != 0:
+                    raise RuntimeError(f"simulation error exit {exit_code}")
         return self.farfields[(freq, angle)][0]     # self.farfields[(freq, angle)] = (cpol, xpol)
+    
+    def _chunk_data(self, freq: Iterable, angle: Iterable) -> list:
+        """Split frequency list into roughly equal chunks for each process."""
+        n = len(freq)
+        if n == 0:
+            return [[] for _ in range(self.size)]
+        if n < self.size:
+            chunks = [[f] for f in freq]
+            chunks.extend([[] for _ in range(self.size - n)])
+        else:
+            avg = n // self.size
+            chunks = []
+            for i in range(self.size):
+                start = i * avg
+                end = (i + 1) * avg if i != self.size - 1 else n
+                chunks.append(freq[start:end])
+        return chunks
+    
+    def __call__mpi(self, freq, angle, delay=0):
+        # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
+        #             delayed(_run_one)(f) for f in range(freq_to_run)
+        #         )
+
+        if isinstance(freq, Iterable):
+            # return np.array([self.__call__(f, angle) for f in freq])
+            # Step 1: Only rank 0 checks which frequencies exist
+            if self.rank == 0:
+                freqs_encoded = [self.encoder(f) for f in freq]
+                freqs_to_run = [f for f in freqs_encoded if not self._is_data_exist(f)]
+                chunks = self._chunk_data(freqs_to_run, angle)
+                print("[Rank 0] freqs_to_run:", freqs_to_run)
+                print("[Rank 0] chunks:", chunks)
+            else:
+                chunks = None
+            local_freq = self.comm.scatter(chunks, root=0)
+            print(f"[Rank {self.rank}] attempting to simulate on {local_freq}...")
+            local_exit_code = [self.run(f) for f in local_freq]
+            if any(code != 0 for code in local_exit_code):
+                raise RuntimeError(
+                    f"simulation error exit {exit_code} at rank {self.rank}"
+                )
+            self.comm.Barrier()
+            if self.rank == 0:
+                return np.array([self.__call__(f, angle) for f in freq])
+            else:
+                return None
+        if isinstance(angle, Iterable):
+            return np.array([self.__call__(freq, a) for a in angle])
+            # return Parallel(n_jobs=4, backend="loky")(
+            #     delayed(self.__call__)(freq, a) for a in angle
+            # )
+            # return np.array(list(results))
+        else:
+            freq, angle = self.encoder(freq), self.encoder(angle)
+            if (self._is_data_exist(freq)): pass
+            else: 
+                exit_code = self.run(freq)
+                if exit_code != 0:
+                    raise RuntimeError(f"simulation error exit {exit_code}")
+            
+            if self.rank==0:
+                return self.farfields[(freq, angle)][0]     # self.farfields[(freq, angle)] = (cpol, xpol)
+            else:
+                return None
+
+    # def __call__mpi(self, freq, angle, delay=0):
+    #     # Step 1: Encode frequencies and compute which ones to run (rank 0 only)
+    #     if self.rank == 0:
+    #         freqs_encoded = [self.encoder(f) for f in freq]
+    #         freqs_to_run = [f for f in freqs_encoded if not self._is_data_exist(f)]
+    #         chunks = self._chunk_data(freqs_to_run, angle)
+    #         print(f"[Rank 0] freqs_to_run: {freqs_to_run}")
+    #         print(f"[Rank 0] chunks: {chunks}")
+    #     else:
+    #         chunks = None
+
+    #     # Step 2: Scatter chunks to all ranks
+    #     local_freq = self.comm.scatter(chunks, root=0)
+    #     print(f"[Rank {self.rank}] attempting to simulate on {local_freq}...")
+
+    #     # Step 3: Each rank runs its own local simulations
+    #     local_results = []
+    #     for f in local_freq:
+    #         exit_code = self.run(f)
+    #         if exit_code != 0:
+    #             raise RuntimeError(f"simulation error exit {exit_code} at rank {self.rank}")
+    #         local_results.append(self._collect_result(f, angle))  # collect whatever result you need
+
+    #     # Step 4: Gather results back to rank 0
+    #     all_results = self.comm.gather(local_results, root=0)
+
+    #     if self.rank == 0:
+    #         # flatten results
+    #         final_results = [item for sublist in all_results for item in sublist]
+    #         print(f"[Rank 0] completed frequencies from all ranks: {final_results}")
+    #         return np.array(final_results)
+    #     else:
+    #         return None
     
     def _is_data_exist(self, freq_query):
         return freq_query in self.freqs
     
     def _add_freq(self, new_freq):
-        return self.freqs.append(new_freq)
+        if not isinstance(new_freq, Iterable): new_freq = [new_freq]
+        if self.usempi:
+            freqs = self.comm.gather(new_freq, root=0)
+            if self.rank == 0:
+                new_freq = [item for sublist in freqs for item in sublist]
+                self.freqs.extend(new_freq)
+        else:
+            self.freqs.extend(new_freq)
     
-    def _init_in_file(self, freq_query=2580):
+    def _add_farfield(self, new_farfield):
+        if self.usempi:
+            farfields_local_keys, farfields_local_vals = zip(*new_farfield.items())
+            farfields_keys = self.comm.gather(farfields_local_keys, root=0)
+            farfields_vals = self.comm.gather(farfields_local_vals, root=0)
+            if self.rank == 0:
+                farfields_keys_ravel = [item for sublist in farfields_keys for item in sublist]
+                farfields_vals_ravel = [item for sublist in farfields_vals for item in sublist]
+                new_farfield = {k: v for k, v in zip(farfields_keys_ravel, farfields_vals_ravel)}
+                self.farfields.update(new_farfield)
+        else:
+            self.farfields.update(new_farfield)
+    
+    def _init_in_file(self, freq_query=1280, delay=0):
+        time.sleep(delay)
         org_path = os.getcwd()
         os.chdir(self.workingpath)
         in_data = self.in_file.open('r').readlines()[:2]
@@ -302,6 +430,8 @@ class OnFlySolver:
                                f"farfield_file: {Path(farfield_file).absolute().__str__()}\n"
                                f'{"\n".join(Path(farfield_file).open('r').readlines())}'
                                )
+        farfields_new = {}
+        freqs_new = []
         for d in farfield_data:
             theta, phi, cpol_re, cpol_im, xpol_re, xpol_im = map(float, d.strip("\n").split())
             if self.sweep_angle_type==0:    # phi-sweep
@@ -309,12 +439,16 @@ class OnFlySolver:
             elif self.sweep_angle_type==1:  # theta-sweep
                 angle = self.encoder(theta)
             else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
-            self.farfields[(freq, angle)] = (cpol_re+1j*cpol_im, xpol_re+1j*xpol_im)
-        self.freqs.append(freq)
+            farfields_new[(freq, angle)] = (cpol_re+1j*cpol_im, xpol_re+1j*xpol_im)
+        freqs_new.append(freq)
+        self._add_freq(freqs_new)
+        self._add_farfield(farfields_new)
         return 0
     
     def run(self, freq_query):
+        print(f"[Rank {self.rank}] running simulation at {freq_query}...")
         from subprocess import Popen, STDOUT, PIPE
+        if freq_query is None: return 0     # pass
         print(f"\n ======  Adding Frequency Sample: {freq_query}  ====== \n")
         freq_query = self.encoder(freq_query)
         org_path = os.getcwd()
@@ -366,7 +500,8 @@ class OnFlySolverMyMoM:
             angles = None,              # dummy input
             sweep_angle_type = None,    # dummy input
             other_args = [90, 0, 0, 1e-5], 
-            precision: int = 3
+            precision: int = 3,
+            usempi=False
             ):
         self.workingpath = Path(workingpath).absolute().__str__()
         self.model_name = model_name

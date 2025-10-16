@@ -4,6 +4,8 @@ import sys
 from numpy.random import default_rng
 from numpy.linalg import svd
 
+from scipy.signal import find_peaks
+
 from sklearn.preprocessing import (
     StandardScaler, MinMaxScaler, PowerTransformer
 )
@@ -55,7 +57,7 @@ class ReducedBasisGPBASE:
     def __init__(
         self, solver, trainer, angles, n_init=6, r=3, adaptive_r=True, 
         acquisition_type=0, Xnormalizer_type=0, terms=1, 
-        normalizeY=True, verbose=True
+        normalizeY=True, verbose=True, usempi=False, mpicomm=None
     ) -> None:
         self.solver = solver
         self.train_gp = trainer
@@ -80,46 +82,60 @@ class ReducedBasisGPBASE:
         self.gps_real = []
         self.gps_imag = []
         self.fbest = None
+        self.usempi = usempi
+        if usempi:
+            self.comm = mpicomm
+            self.rank = mpicomm.Get_rank()
+            self.size = mpicomm.Get_size()
         return None
         
     def initialize(self, f_min, f_max, sampling_strategy=1):
-
-        if sampling_strategy == 0:
-            self.sampler = lambda f_min, f_max, n_grid: \
-                np.linspace(f_min, f_max, n_grid)[:, None]
-        elif sampling_strategy == 1:
-            self.sampler = lambda f_min, f_max, n_grid: \
-                self.latin_hypercube_sampling(f_min, f_max, n_grid)[:, None]
-            # grid = self.normalizerX.transform(lhc_samples)
+    
+        if (not self.usempi) or (self.usempi and self.rank==0):
+            if sampling_strategy == 0:
+                self.sampler = lambda f_min, f_max, n_grid: \
+                    np.linspace(f_min, f_max, n_grid)[:, None]
+            elif sampling_strategy == 1:
+                self.sampler = lambda f_min, f_max, n_grid: \
+                    self.latin_hypercube_sampling(f_min, f_max, n_grid)[:, None]
+                # grid = self.normalizerX.transform(lhc_samples)
+            else:
+                print(f"sampling_strategy {sampling_strategy} not supported!")
+                print(f"falling back to sampling_strategy 0 (grid sampling)")
+                return self.initialize(f_min, f_max, 0)
+            
+            # f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
+            f_init = self.sampler(f_min, f_max, self.n_init).squeeze(-1)
+            self.freqs = list(f_init)
+            angles_init = self.angles
         else:
-            print(f"sampling_strategy {sampling_strategy} not supported!")
-            print(f"falling back to sampling_strategy 0 (grid sampling)")
-            return self.initialize(f_min, f_max, 0)
-        
-        # f_init = self.latin_hypercube_sampling(f_min, f_max, self.n_init)
-        f_init = self.sampler(f_min, f_max, self.n_init).squeeze(-1)
-        self.freqs = list(f_init)
-        Y = self.solver(f_init, self.angles)  # (n_init, n_angles)
-        # Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)
-        # self.fbest = np.mean(Y)
-        Y = Y.reshape(self.n_init, len(self.angles))  # (n_init, n_angles)
-        self.responses = list(Y) # store each freq response (complex vector)
+            f_init, angles_init = None, None
 
-        # Data normalizer
-        X = np.array(self.freqs)[:, None]
-        self.normalizerX = self.get_data_normalizer(X)
+        f_init = self.comm.bcast(f_init, root=0)
+        angles_init = self.comm.bcast(angles_init, root=0)
+        Y = self.solver(f_init, angles_init)  # (n_init, n_angles)
 
-        # Acquisition functions
-        if (self.acquisition_type==0):
-            self.acquisition_function = lambda _mu, _var: max_variance(_mu, _var)
-        elif (self.acquisition_type==1):
-            self.acquisition_function = lambda _mu, _var: expected_improvement(_mu, _var, np.array([self.fbest]))
-        elif (self.acquisition_type==2):
-            self.acquisition_function = lambda _mu, _var: upper_confidence_bound(_mu, _var)
-        else: RuntimeError(f"INVALID ACQUISITION TYPE: {self.acquisition_type} must be < 3")
+        if (not self.usempi) or (self.usempi and self.rank==0):
+            # Y = np.array([self.solver(f, a) for f, a in product(f_init, self.angles)])  # (n_init, n_angles)
+            # self.fbest = np.mean(Y)
+            Y = Y.reshape(self.n_init, len(self.angles))  # (n_init, n_angles)
+            self.responses = list(Y) # store each freq response (complex vector)
 
-        self._update_basis()
-        self._fit_gps()
+            # Data normalizer
+            X = np.array(self.freqs)[:, None]
+            self.normalizerX = self.get_data_normalizer(X)
+
+            # Acquisition functions
+            if (self.acquisition_type==0):
+                self.acquisition_function = lambda _mu, _var: max_variance(_mu, _var)
+            elif (self.acquisition_type==1):
+                self.acquisition_function = lambda _mu, _var: expected_improvement(_mu, _var, np.array([self.fbest]))
+            elif (self.acquisition_type==2):
+                self.acquisition_function = lambda _mu, _var: upper_confidence_bound(_mu, _var)
+            else: RuntimeError(f"INVALID ACQUISITION TYPE: {self.acquisition_type} must be < 3")
+
+            self._update_basis()
+            self._fit_gps()
         return 0
     
     def get_data_normalizer(self, X):
@@ -178,43 +194,61 @@ class ReducedBasisGPBASE:
     
     def acquisition_next_frequency(self, f_min, f_max, n_grid=101, n_new_samples=1):
         """Pick frequency that maximizes integrated variance across coefficients"""
+        if (not self.usempi) or (self.usempi and self.rank==0):
 
-        total_mu, total_var, f_domain, POD_energy = self._pred_gps(f_min, f_max, n_grid)
-        # print(np.array(preds))
+            total_mu, total_var, f_domain, POD_energy = self._pred_gps(f_min, f_max, n_grid)
+            # print(np.array(preds))
+            
+            responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
+            loss_per_freq = np.mean(np.square(self.responses-responses_pred), axis=1)
+            self.fbest = total_mu[np.argmin(loss_per_freq)]
+
+            # Compute acquisition values
+            ac_vals = self.acquisition_function(total_mu, total_var)
+
+            # Convert frequencies back to original scale
+            f_domain = self.normalizerX.inverse_transform(f_domain)
+
+            # --- Find local maxima (peaks) ---
+            peaks, properties = find_peaks(ac_vals, prominence=1e-8)  # adjust prominence if needed
+
+            # If fewer peaks than requested, fallback to global top-n values
+            if len(peaks) < n_new_samples:
+                sorted_idx = np.argsort(ac_vals)[::-1]
+                mask = ~np.isin(f_domain[sorted_idx, 0], self.freqs)
+                chosen_idx = sorted_idx[mask][:n_new_samples]
+            else:
+                # Sort peaks by prominence (descending)
+                prom_sorted_idx = np.argsort(properties["prominences"])[::-1]
+                top_peaks = peaks[prom_sorted_idx][:n_new_samples]
+
+                # Remove already-sampled frequencies
+                mask = ~np.isin(f_domain[top_peaks, 0], self.freqs)
+                chosen_idx = top_peaks[mask][:n_new_samples]
+
+            # --- Prepare outputs ---
+            new_freq_out = f_domain[chosen_idx, 0].tolist()
+            ac_vals_out = ac_vals[chosen_idx].tolist()
+
+            # denom = self.r
+
+            return new_freq_out, ac_vals_out, POD_energy
         
-        responses_pred = self.reconstruct(self.freqs)   # [freq, angle]
-        loss_per_freq = np.mean(np.square(self.responses-responses_pred), axis=1)
-        self.fbest = total_mu[np.argmin(loss_per_freq)]
+        else:
 
-        ac_vals = self.acquisition_function(total_mu, total_var)
-        # idx = np.argmax(ac_vals)
-        new_freq_out, ac_vals_out = [], []
-        f_domain = self.normalizerX.inverse_transform(f_domain)
-        # for new_idx in np.flip(np.argsort(ac_vals)):
-        #     if f_domain[new_idx, 0] not in self.freqs:
-        #         new_freq_out.append(f_domain[new_idx, 0])
-        #         ac_vals_out.append(ac_vals[new_idx])
-        #         if len(new_freq_out) >= n_new_samples: 
-        #             break
-        sorted_idx = np.argsort(ac_vals)[::-1]
-        mask = ~np.isin(f_domain[sorted_idx, 0], self.freqs)
-        chosen_idx = sorted_idx[mask][:n_new_samples]
-        new_freq_out = f_domain[chosen_idx, 0].tolist()
-        ac_vals_out = ac_vals[chosen_idx].tolist()
-
-        # denom = self.r
-
-        return new_freq_out, ac_vals_out, POD_energy
+            return None, None, None
     
     def update(self, f_new):
-        if isinstance(f_new, Iterable): 
-            return sum([self.update(f) for f in f_new])
-        y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
-        y_new = y_new.reshape(1, len(self.angles))[0]
-        self.freqs.append(f_new)
-        self.responses.append(y_new)
-        self._update_basis()
-        self._fit_gps()
+        # if isinstance(f_new, Iterable): 
+        #     return sum([self.update(f) for f in f_new])
+        # y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
+        y_new = self.solver(f_new, self.angles)
+        if (not self.usempi) or (self.usempi and self.rank==0):
+            y_new = y_new.reshape(1, len(self.angles))[0]
+            self.freqs.append(f_new)
+            self.responses.append(y_new)
+            self._update_basis()
+            self._fit_gps()
         return 0
         
     def _fit_gps(self):

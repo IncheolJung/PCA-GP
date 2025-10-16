@@ -10,7 +10,12 @@ from ReducedBasisGP import *
 try:
     from libmpi.libmpi import *
     if size==1:
+        print("Single MPI run!")
+        print("Falls back to OpenMP version", end='\n\n')
         usempi=False
+        comm=None   # dummy comm
+        rank=None   # dummy rank
+        size=None   # dummy size
     else:
         if rank==0:
             print("USING MPI: mpi4py backend", end='\n\n')
@@ -19,6 +24,9 @@ except ImportError:
     print("mpi4py NOT DETECTED!")
     print("Falls back to OpenMP version", end='\n\n')
     usempi=False
+    comm=None   # dummy comm
+    rank=None   # dummy rank
+    size=None   # dummy size
 
 
 def configuration():
@@ -89,72 +97,79 @@ def validate(*args):
 
     rbgp, f_test, solver, stdout, dir_out = args
 
-    # Predict at new frequency
-    pred  = rbgp.reconstruct(f_test)
-    # truth = solver(f_test, rbgp.angles)
-    truth = np.array([solver(f, a) for f, a in product(f_test, rbgp.angles)])  # (n_init, n_angles)
-    truth = truth.reshape(len(f_test), len(rbgp.angles))  # (n_init, n_angles)
-    print("\n ======  Final Statistics  ====== \n")
-    print("Predicted response shape:", pred.shape)
-    print("RMSE:{:.12f}".format(np.mean(np.square(np.abs(pred - truth))) / np.mean(np.square(np.abs(truth)))) )
-    stdout.flush()
+    truth = solver(f_test, rbgp.angles)
 
-    from matplotlib.pyplot import subplots, show as pltshow
-    from matplotlib import rcParams
-    rcParams["text.usetex"] = True
-    rcParams["font.size"] = 12
+    # if usempi:
+    #     comm.Barrier()
+    
+    if (not usempi) or (usempi and rank==0):
+        # truth = np.array([solver(f, a) for f, a in product(f_test, rbgp.angles)])  # (n_init, n_angles)
+        truth = np.array(truth).reshape(len(f_test), len(rbgp.angles))  # (n_init, n_angles)
+        f_test = np.array(f_test)
 
-    ########### 1d plot ###########
-    hf, hx = subplots(nrows=2, figsize=(12,8), constrained_layout=True)
-    for i in range(pred.shape[0]):
-        hx[0].plot(rbgp.angles, pred.real[i],  'r-', alpha=0.5, label="PRED RE"  if i == 0 else None)
-        hx[0].plot(rbgp.angles, truth.real[i], 'b-', alpha=0.5, label="TRUTH RE" if i == 0 else None)
-    for i in range(pred.shape[0]):
-        hx[1].plot(rbgp.angles, pred.imag[i],  'r-', alpha=0.5, label="PRED IM"  if i == 0 else None)
-        hx[1].plot(rbgp.angles, truth.imag[i], 'b-', alpha=0.5, label="TRUTH IM" if i == 0 else None)
-    hf.legend()
-    hf.savefig(dir_out/"GP_results_1d.png")
-    ######### end 1d plot #########
+        # Predict at new frequency
+        pred  = rbgp.reconstruct(f_test)
+        print("\n ======  Final Statistics  ====== \n")
+        print("Predicted response shape:", pred.shape)
+        print("RMSE:{:.12f}".format(np.mean(np.square(np.abs(pred - truth))) / np.mean(np.square(np.abs(truth)))) )
+        stdout.flush()
 
-    ########### 2d plot ###########
-    nrows, ncols = 2, 3
-    hf, hx = subplots(nrows=nrows, ncols=ncols, figsize=(16,8), constrained_layout=True)
-    extent = [rbgp.angles.min(), rbgp.angles.max(), f_test.min(), f_test.max()]
-    im = np.empty((nrows,ncols), dtype="object")
-    eps = 1e-12  # small number to avoid log(0)
-    numer_real = np.square(np.abs(pred.real - truth.real))
-    denom_real = np.square(np.max(truth.real) - np.min(truth.real))
-    numer_imag = np.square(np.abs(pred.imag - truth.imag))
-    denom_imag = np.square(np.max(truth.imag) - np.min(truth.imag))
-    np.seterr(all="raise")
-    try:
-        error_real = 10 * np.log10(numer_real / denom_real + eps*denom_real)
-        error_imag = 10 * np.log10(numer_imag / denom_imag + eps*denom_imag)
-        error_scale = "dB"
-    except FloatingPointError:
-        error_real = numer_real
-        error_imag = numer_imag
-        error_scale = "linear"
-    np.seterr()
-    print(f"Error scale: {error_scale}")
-    error = error_real + 1j*error_imag
-    im[0,0] = hx[0,0].imshow(pred.real,  cmap="turbo", aspect="auto", extent=extent)
-    im[0,1] = hx[0,1].imshow(truth.real, cmap="turbo", aspect="auto", extent=extent)
-    im[1,0] = hx[1,0].imshow(pred.imag,  cmap="turbo", aspect="auto", extent=extent)
-    im[1,1] = hx[1,1].imshow(truth.imag, cmap="turbo", aspect="auto", extent=extent)
-    im[0,2] = hx[0,2].imshow(error.real,  cmap="hot", aspect="auto", extent=extent)
-    im[1,2] = hx[1,2].imshow(error.imag, cmap="hot", aspect="auto", extent=extent)
-    hx[0,0].set_title("PRED RE")
-    hx[0,1].set_title("TRUTH RE")
-    hx[1,0].set_title("PRED IM")
-    hx[1,1].set_title("TRUTH IM")
-    hx[0,2].set_title(f"RMSE RE [{error_scale}]")
-    hx[1,2].set_title(f"RMSE IM [{error_scale}]")
-    for i in range(nrows): 
-        for j in range(ncols):
-            hf.colorbar(im[i,j], ax=hx[i,j])
-    hf.savefig(dir_out/"GP_results_2d.png")
-    ######### end 2d plot #########
+        from matplotlib.pyplot import subplots, show as pltshow
+        from matplotlib import rcParams
+        rcParams["text.usetex"] = True
+        rcParams["font.size"] = 12
+
+        ########### 1d plot ###########
+        hf, hx = subplots(nrows=2, figsize=(12,8), constrained_layout=True)
+        for i in range(pred.shape[0]):
+            hx[0].plot(rbgp.angles, pred.real[i],  'r-', alpha=0.5, label="PRED RE"  if i == 0 else None)
+            hx[0].plot(rbgp.angles, truth.real[i], 'b-', alpha=0.5, label="TRUTH RE" if i == 0 else None)
+        for i in range(pred.shape[0]):
+            hx[1].plot(rbgp.angles, pred.imag[i],  'r-', alpha=0.5, label="PRED IM"  if i == 0 else None)
+            hx[1].plot(rbgp.angles, truth.imag[i], 'b-', alpha=0.5, label="TRUTH IM" if i == 0 else None)
+        hf.legend()
+        hf.savefig(dir_out/"GP_results_1d.png")
+        ######### end 1d plot #########
+
+        ########### 2d plot ###########
+        nrows, ncols = 2, 3
+        hf, hx = subplots(nrows=nrows, ncols=ncols, figsize=(16,8), constrained_layout=True)
+        extent = [rbgp.angles.min(), rbgp.angles.max(), f_test.min(), f_test.max()]
+        im = np.empty((nrows,ncols), dtype="object")
+        eps = 1e-12  # small number to avoid log(0)
+        numer_real = np.square(np.abs(pred.real - truth.real))
+        denom_real = np.square(np.max(truth.real) - np.min(truth.real))
+        numer_imag = np.square(np.abs(pred.imag - truth.imag))
+        denom_imag = np.square(np.max(truth.imag) - np.min(truth.imag))
+        np.seterr(all="raise")
+        try:
+            error_real = 10 * np.log10(numer_real / denom_real + eps*denom_real)
+            error_imag = 10 * np.log10(numer_imag / denom_imag + eps*denom_imag)
+            error_scale = "dB"
+        except FloatingPointError:
+            error_real = numer_real
+            error_imag = numer_imag
+            error_scale = "linear"
+        np.seterr()
+        print(f"Error scale: {error_scale}")
+        error = error_real + 1j*error_imag
+        im[0,0] = hx[0,0].imshow(pred.real,  cmap="turbo", aspect="auto", extent=extent)
+        im[0,1] = hx[0,1].imshow(truth.real, cmap="turbo", aspect="auto", extent=extent)
+        im[1,0] = hx[1,0].imshow(pred.imag,  cmap="turbo", aspect="auto", extent=extent)
+        im[1,1] = hx[1,1].imshow(truth.imag, cmap="turbo", aspect="auto", extent=extent)
+        im[0,2] = hx[0,2].imshow(error.real,  cmap="hot", aspect="auto", extent=extent)
+        im[1,2] = hx[1,2].imshow(error.imag, cmap="hot", aspect="auto", extent=extent)
+        hx[0,0].set_title("PRED RE")
+        hx[0,1].set_title("TRUTH RE")
+        hx[1,0].set_title("PRED IM")
+        hx[1,1].set_title("TRUTH IM")
+        hx[0,2].set_title(f"RMSE RE [{error_scale}]")
+        hx[1,2].set_title(f"RMSE IM [{error_scale}]")
+        for i in range(nrows): 
+            for j in range(ncols):
+                hf.colorbar(im[i,j], ax=hx[i,j])
+        hf.savefig(dir_out/"GP_results_2d.png")
+        ######### end 2d plot #########
     return 0
 
 
@@ -171,18 +186,36 @@ def validate(*args):
 #     return Path(file_path).open('w').write(data)
 
 
-# --- current PCA --- #
-def export(file_path, np_data, freqs, nodes):
+# --- angular PCA --- #
+def export(file_path, np_data, freqs, theta, phi):
     def make_col(data): return " ".join(map(str, data))
     def make_row(data): return "\n".join(map(str, data))
-    def parse_complex(data): return f"({data.real},{data.imag})"
     exitcode = []
-    header = make_col([np_data.shape[-1], 1])
+    header = ["Theta", "Phi", "Cpol(Re)", "Cpol(Im)"]
     for f, data in zip(freqs, np_data):
-        data = list(map(parse_complex, data))
-        data = make_row([header, *data])
-        exitcode.append((Path(file_path)/f"{f}.mat").open('w').write(data))
+        data_ravel = data.reshape(-1)
+        data = [make_col([th, ph, data_ravel[i].real, data_ravel[i].imag]) 
+                for i, (th, ph) in enumerate(zip(theta, phi))]
+        data = list([make_col(header), *data])
+        data = make_row([make_col(header), *data])
+        exitcode.append(
+            (Path(file_path)/f"{f}.efar").open('w').write(data)
+        )
     return any(exitcode)
+
+
+# # --- current PCA --- #
+# def export(file_path, np_data, freqs, nodes):
+#     def make_col(data): return " ".join(map(str, data))
+#     def make_row(data): return "\n".join(map(str, data))
+#     def parse_complex(data): return f"({data.real},{data.imag})"
+#     exitcode = []
+#     header = make_col([np_data.shape[-1], 1])
+#     for f, data in zip(freqs, np_data):
+#         data = list(map(parse_complex, data))
+#         data = make_row([header, *data])
+#         exitcode.append((Path(file_path)/f"{f}.mat").open('w').write(data))
+#     return any(exitcode)
 
 
 def main():
@@ -357,12 +390,24 @@ def main():
 
         f_export = np.linspace(f_min, f_max, f_num)
         # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
-        export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
+        export("EFAR/", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
+        # export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
 
-        if config.validate: 
+    if config.validate: 
+    
+        if (not usempi) or (usempi and rank==0):
             # f_test = np.linspace(f_min, f_max, 101)
-            f_test = np.linspace(f_min, f_max, f_num)
-            validate(rbgp, f_test, solver, stdout, dir_out)
+            f_test = np.linspace(f_min, f_max, f_num).tolist()
+        else:
+            f_test = None
+            stdout = None
+            dir_out = None
+        
+        if usempi:
+            comm.Barrier()
+            f_test = comm.bcast(f_test, root=0)
+            
+        validate(rbgp, f_test, solver, stdout, dir_out)
 
     # pltshow()
     return 0

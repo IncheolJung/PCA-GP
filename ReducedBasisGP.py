@@ -111,8 +111,9 @@ class ReducedBasisGPBASE:
         else:
             f_init, angles_init = None, None
 
-        f_init = self.comm.bcast(f_init, root=0)
-        angles_init = self.comm.bcast(angles_init, root=0)
+        if self.usempi:
+            f_init = self.comm.bcast(f_init, root=0)
+            angles_init = self.comm.bcast(angles_init, root=0)
         Y = self.solver(f_init, angles_init)  # (n_init, n_angles)
 
         if (not self.usempi) or (self.usempi and self.rank==0):
@@ -244,9 +245,11 @@ class ReducedBasisGPBASE:
         # y_new = np.array([self.solver(f, a) for f, a in product([f_new], self.angles)])
         y_new = self.solver(f_new, self.angles)
         if (not self.usempi) or (self.usempi and self.rank==0):
-            y_new = y_new.reshape(1, len(self.angles))[0]
-            self.freqs.append(f_new)
-            self.responses.append(y_new)
+            # print("y_new.shape = ", y_new.shape)
+            # print("(f_new, angles) = ", (len(f_new), len(self.angles)))
+            y_new = y_new.reshape(len(f_new), len(self.angles))
+            self.freqs.extend(f_new)
+            self.responses.extend(y_new)
             self._update_basis()
             self._fit_gps()
         return 0

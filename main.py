@@ -340,13 +340,12 @@ def main():
         
         if usempi:
             comm.Barrier()
-            break_token.bcast(break_token, root=0)
-            break_token.bcast(f_next, root=0)
+            break_token = comm.bcast(break_token, root=0)
+            f_next = comm.bcast(f_next, root=0)
         
         if break_token: break
 
-        y_new = solver(f_next)
-        rbgp.update(f_next, y_new)
+        rbgp.update(f_next)
     
     if (not usempi) or (usempi and rank==0):
         print("\n ======  Stopping criterion met.  ====== \n")

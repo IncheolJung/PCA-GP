@@ -265,6 +265,54 @@ class OnFlySolver:
                 chunks[i%self.size][1].append(angle)
         return chunks
     
+    def _merge_efar_rcs(self, freq, partial_dirs):
+        Path(self.workingpath).mkdir(freq)
+        paratial_dirs = [Path(self.workingpath)/d for d in partial_dirs]
+        merged_dir = Path(self.workingpath)/freq
+        self._cp_all_files(from_dir=paratial_dirs[0], to_dir=merged_dir)
+        efar_file = merged_dir/f"{self.model_name}.efar"
+        rcs_file = merged_dir/f"{self.model_name}.rcs"
+        efar_header = efar_file.open('r').readlines()[:1]
+        rcs_header = rcs_file.open('r').readlines()[:1]
+        efar_data, rcs_data = [], []
+        for d in partial_dirs:
+            efar_data.extend((d/f"{self.model_name}.efar").open('r').readlines()[1:])
+            rcs_data.extend((d/f"{self.model_name}.rcs").open('r').readlines()[1:])
+        exit_code_efar = efar_file.open('w').write(''.join(*efar_header, *efar_data))
+        exit_code_rcs = rcs_file.open('w').write(''.join(*rcs_header, *rcs_data))
+        return exit_code_efar + exit_code_rcs
+    
+    def _clean_simulations(self):
+        # complete_freqs = Path(self.workingpath).glob("*")
+        partial_dirs = list(Path(self.workingpath).glob("*[[]*[]]"))
+        partial_dirs = [d.name for d in sorted(partial_dirs) 
+                            if d.is_dir() and not '~tmp' in d.name]
+        partial_freqs = list(set([d[:d.index("_[")] for d in partial_dirs]))
+        for freq in partial_freqs:
+            partials_for_this_freq = [d for d in partial_dirs if freq in d]
+            start_glob, end_glob = [], []
+            for p in partials_for_this_freq:
+                # suppose dirname is "frequency_[i1_i2]"
+                start, end = p[len(freq)+2:-1].split('_')
+                start_glob.append(start)
+                end_glob.append(end)
+            start_glob, end_glob = sorted(start_glob), sorted(end_glob)
+            index_series = [*zip(start_glob, end_glob)]
+            index_diff = [index_series[i+1]-index_series[i] 
+                          for i in range(len(index_series)-1)]
+            index_head_tail = [i for i in index_diff if i != 1]
+            if len(index_head_tail) == 2:
+                head, tail = index_head_tail
+                if (head==0) and (tail==self.n_angles-1):
+                    self._merge_efar_rcs(freq, partials_for_this_freq)
+            else:
+                print(
+                    f"Broken simulation at {freq}. "
+                    f"Stored index are {index_head_tail} "
+                    f"while [0, {self.n_angles-1}] is required"
+                )
+        return 0
+    
     def __call__mpi(self, freq, angle, delay=0):
         # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
         #             delayed(_run_one)(f) for f in range(freq_to_run)
@@ -301,6 +349,7 @@ class OnFlySolver:
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
             self.comm.Barrier()
+            self._clean_simulations()
             if self.rank == 0:
                 return np.array([self.__call__openmp(f, angle) for f in freq])
             else:
@@ -484,7 +533,7 @@ class OnFlySolver:
                 shutil.copy2(f, to_dir / f.name)
         return 0
     
-    def _load_farfield_data(self, farfield_file: str, freq = None):
+    def _load_farfield_data(self, farfield_file: str, freq = None, angle=None):
         if freq is None: 
             try: freq = float(Path(farfield_file).absolute().parent.name)
             except ValueError: 
@@ -497,9 +546,11 @@ class OnFlySolver:
                         "Cannot find farfield data:", 
                         Path(farfield_file).absolute().__str__()
                     )
+        if angle is None:
+            angle = self.angles
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
-        if len(farfield_data) != len(self.phi): 
+        if len(farfield_data) != len(angle): 
             raise RuntimeError("data unmatched with queried angle:\n"
                                f"datasize {len(farfield_data)} != request {len(self.phi)}\n"
                                f"at frequency {freq}\n"

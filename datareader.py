@@ -618,7 +618,10 @@ class OnFlySolver:
 
         # self._cp_all_files(to_dir=f"./{freq_query}")
         # os.chdir(org_path)
-        self._load_farfield_data(f"./{self.model_name}.efar", freq_query)
+        self._load_farfield_data(
+            f"./{self.model_name}.efar", 
+            freq_query, angle_query
+        )
         self._exit_simulation(freq_query, org_path)
         return 0
     

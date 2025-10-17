@@ -298,6 +298,8 @@ class OnFlySolver:
                 end_glob.append(end)
             start_glob, end_glob = sorted(start_glob), sorted(end_glob)
             index_series = [*zip(start_glob, end_glob)]
+            index_series = [i for start, end in index_series 
+                            for i in range(start, end + 1)]
             index_diff = [index_series[i+1]-index_series[i] 
                           for i in range(len(index_series)-1)]
             index_head_tail = [i for i in index_diff if i != 1]

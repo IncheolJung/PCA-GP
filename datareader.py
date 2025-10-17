@@ -225,12 +225,40 @@ class OnFlySolver:
         """Split frequency list into roughly equal chunks for each process."""
         n_freq = len(freq)
         if n_freq == 0:   # nothing happens
-            return [(None, None) for _ in range(self.size)]
-        if n_freq < self.size:   # chunk both freq and angle
-            chunks = [([f], angle) for f in freq]
-            chunks.extend([(None, None) for _ in range(self.size - n_freq)])
+            chunks = [(None, None) for _ in range(self.size)]
+        elif n_freq < self.size:   # chunk both freq and angle
+            # find number of sub-chunk (angles)
+            n_chunks_per_freq = [0 for _ in range(n_freq)]
+            for i in range(self.size): 
+                n_chunks_per_freq[i%n_freq] += 1
+            # chunk angles first
+            def split_array(arr, k):
+                n = len(arr)
+                if k <= 0:
+                    return []
+                base = n // k
+                remainder = n % k
+
+                chunks = []
+                start = 0
+                for i in range(k):
+                    # First 'remainder' chunks get an extra element
+                    end = start + base + (1 if i < remainder else 0)
+                    chunks.append(arr[start:end])
+                    start = end
+                return chunks
+            angle_chunks_per_freq = [split_array(angle, k) for k in n_chunks_per_freq]
+            # chunk freq-angle
+            chunks = [([], []) for _ in range(self.size)]
+            mod = 0   # index modifier
+            for i, f in enumerate(freq):
+                for j, angle_chunk in enumerate(angle_chunks_per_freq[i]):
+                    mod += j
+                    chunks[i+mod][0].append(f)
+                    chunks[i+mod][1].append(angle_chunk)
+            # chunks = [([f], angle) for f in freq]
+            # chunks.extend([(None, None) for _ in range(self.size - n_freq)])
         else:   # n_freq >= self.size   # Only chunk based on freq
-            avg = n_freq // self.size
             chunks = [([], []) for _ in range(self.size)]
             for i, f in enumerate(freq):
                 chunks[i%self.size][0].append(f)
@@ -249,15 +277,15 @@ class OnFlySolver:
                 freqs_encoded = [self.encoder(f) for f in freq]
                 freqs_to_run = [f for f in freqs_encoded if not self._is_data_exist(f)]
                 chunks = self._chunk_data(freqs_to_run, angle)
-                print("[Rank 0] freqs_to_run:", freqs_to_run)
-                print("[Rank 0] chunks:", chunks)
+                # print("[Rank 0] freqs_to_run:", freqs_to_run)
+                # print("[Rank 0] chunks:", chunks)
             else:
                 chunks = None
             local_chunks = self.comm.scatter(chunks, root=0)
-            print(f"[Rank {self.rank}] local_chunks", local_chunks)
+            # print(f"[Rank {self.rank}] local_chunks", local_chunks)
             local_freq, local_angle = local_chunks
-            print(f"[Rank {self.rank}] local_freq", local_freq)
-            print(f"[Rank {self.rank}] local_angle", local_angle)
+            # print(f"[Rank {self.rank}] local_freq", local_freq)
+            # print(f"[Rank {self.rank}] local_angle", local_angle)
             if local_freq is not None:
                 min_angles = np.array(local_angle).min(axis=-1)
                 max_angles = np.array(local_angle).max(axis=-1)
@@ -400,10 +428,16 @@ class OnFlySolver:
         self.in_file.open('w').write("".join(in_data))
         return 0
     
-    def _setup_simulation(self, freq_query, angle_query = None):
-        "mkdir ~tmp_$freq_query && cp $model_name.* $freq_query"
-        self.tmp[freq_query] = f"~tmp{len(self.tmp)+1}_{freq_query}"
-        working_path_now = self.tmp[freq_query]
+    def _setup_simulation(self, freq_query, angle_query_idx = None):
+        """
+        mkdir ~tmp_$freq_query_$angle_idx_rng
+        cp $model_name.* ~tmp_$freq_query_$angle_idx_rng
+        - assumes angle_query_idx is in ascending order
+        """
+        istart, iend = angle_query_idx[0], angle_query_idx[-1]
+        dirname = f"~tmp{len(self.tmp)+1}_{freq_query}_[{istart}_{iend}]"
+        self.tmp[freq_query] = dirname
+        working_path_now = dirname
         os.mkdir(working_path_now)
         self._cp_all_files(to_dir=working_path_now)
         os.chdir(working_path_now)
@@ -500,8 +534,8 @@ class OnFlySolver:
         freq_query = self.encoder(freq_query)
         org_path = os.getcwd()
         os.chdir(self.workingpath)
-        self._setup_simulation(freq_query, angle_query)
         angle_query_idx = self._find_index_from_angles(angle_query)
+        self._setup_simulation(freq_query, angle_query_idx)
         self._setup_in_file(freq_query, angle_query_idx)
         log_file_path = f"{self.model_name}.log"
         log_monitor_path = f"{self.workingpath}/compute.log"

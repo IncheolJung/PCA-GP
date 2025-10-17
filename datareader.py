@@ -127,6 +127,8 @@ class OnFlySolver:
         else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
         self.n_angles = len(angles)
         self.encoder = lambda x: round(float(x), precision)
+        self.freqs = [self.encoder(f) for f in self.freqs]
+        self.angles = [self.encoder(a) for a in self.angles]
         self.farfields = {}         # keys: (freq, angle), values: (cpol, xpol)
         if (not usempi) or (usempi and self.rank==0):
             self._init_in_file()        # init .in with dummy freq
@@ -197,7 +199,18 @@ class OnFlySolver:
             #     for i, f in enumerate(freq)
             # )
             # return np.array(list(results))
-        elif isinstance(angle, Iterable):
+        else:
+            freq = self.encoder(freq)
+            if isinstance(angle, Iterable):
+                angle = [self.encoder(a) for a in angle]
+            else:
+                angle = self.encoder(angle)
+            if (self._is_data_exist(freq)): pass
+            else: 
+                exit_code = self.run(freq, angle)
+                if exit_code != 0:
+                    raise RuntimeError(f"simulation error exit {exit_code}")
+        if isinstance(angle, Iterable):
             return np.array([self.__call__openmp(freq, a) for a in angle])
             # return Parallel(n_jobs=4, backend="loky")(
             #     delayed(self.__call__)(freq, a) for a in angle
@@ -206,28 +219,22 @@ class OnFlySolver:
         else:
             freq, angle = self.encoder(freq), self.encoder(angle)
             # print("__call__openmp:", freq, angle)
-            if (self._is_data_exist(freq)): pass
-            else: 
-                exit_code = self.run(freq)
-                if exit_code != 0:
-                    raise RuntimeError(f"simulation error exit {exit_code}")
         return self.farfields[(freq, angle)][0]     # self.farfields[(freq, angle)] = (cpol, xpol)
     
     def _chunk_data(self, freq: Iterable, angle: Iterable) -> list:
         """Split frequency list into roughly equal chunks for each process."""
         n_freq = len(freq)
-        if n_freq == 0:
-            return [[(None, None)] for _ in range(self.size)]
-        if n_freq < self.size:
-            chunks = [[(f, angle)] for f in freq]
-            chunks.extend([[] for _ in range(self.size - n_freq)])
-        else:   # n_freq >= self.size
+        if n_freq == 0:   # nothing happens
+            return [(None, None) for _ in range(self.size)]
+        if n_freq < self.size:   # chunk both freq and angle
+            chunks = [([f], angle) for f in freq]
+            chunks.extend([(None, None) for _ in range(self.size - n_freq)])
+        else:   # n_freq >= self.size   # Only chunk based on freq
             avg = n_freq // self.size
-            chunks = []
-            for i in range(self.size):
-                start = i * avg
-                end = (i + 1) * avg if i != self.size - 1 else n_freq
-                chunks.append((freq[start:end], angle))
+            chunks = [([], []) for _ in range(self.size)]
+            for i, f in enumerate(freq):
+                chunks[i%self.size][0].append(f)
+                chunks[i%self.size][1].append(angle)
         return chunks
     
     def __call__mpi(self, freq, angle, delay=0):
@@ -247,27 +254,31 @@ class OnFlySolver:
             else:
                 chunks = None
             local_chunks = self.comm.scatter(chunks, root=0)
-            local_freq, local_angle = zip(*local_chunks)
-            min_angles = np.array(local_angle).min(axis=-1)
-            max_angles = np.array(local_angle).max(axis=-1)
-            print(
-                f"[Rank {self.rank}] attempting to simulate on...",
-                *[f"    {f} MHz, [{a_min}, {a_max}] DEG" 
-                    for f, a_min, a_max in zip(local_freq, min_angles, max_angles)],
-                sep='\n',
-                )
-            local_exit_code = [self.run(*work) for work in local_chunks]
-            if any(code != 0 for code in local_exit_code):
-                raise RuntimeError(
-                    f"simulation error exit {exit_code} at rank {self.rank}"
-                )
+            print(f"[Rank {self.rank}] local_chunks", local_chunks)
+            local_freq, local_angle = local_chunks
+            print(f"[Rank {self.rank}] local_freq", local_freq)
+            print(f"[Rank {self.rank}] local_angle", local_angle)
+            if local_freq is not None:
+                min_angles = np.array(local_angle).min(axis=-1)
+                max_angles = np.array(local_angle).max(axis=-1)
+                print(
+                    f"[Rank {self.rank}] attempting to simulate on...",
+                    *[f"    {f} MHz, [{min_a}, {max_a}] DEG" 
+                        for f, min_a, max_a in zip(local_freq, min_angles, max_angles)],
+                    sep='\n',
+                    )
+                local_exit_code = [self.run(*work) for work in zip(local_freq, local_angle)]
+                if any(code != 0 for code in local_exit_code):
+                    raise RuntimeError(
+                        f"simulation error exit {exit_code} at rank {self.rank}"
+                    )
             self.comm.Barrier()
             if self.rank == 0:
-                return np.array([self.__call__mpi(f, angle) for f in freq])
+                return np.array([self.__call__openmp(f, angle) for f in freq])
             else:
                 return None
         elif isinstance(angle, Iterable):
-            return np.array([self.__call__mpi(freq, a) for a in angle])
+            return np.array([self.__call__openmp(freq, a) for a in angle])
             # return Parallel(n_jobs=4, backend="loky")(
             #     delayed(self.__call__)(freq, a) for a in angle
             # )
@@ -331,6 +342,7 @@ class OnFlySolver:
                 self.freqs.extend(new_freq)
         else:
             self.freqs.extend(new_freq)
+        return 0
     
     def _add_farfield(self, new_farfield):
         if self.usempi:
@@ -344,6 +356,10 @@ class OnFlySolver:
                 self.farfields.update(new_farfield)
         else:
             self.farfields.update(new_farfield)
+        return 0
+
+    def _find_index_from_angles(self, angle_query):
+        return [self.angles.index(a) for a in angle_query]
     
     def _init_in_file(self, freq_query=1280, delay=0):
         time.sleep(delay)
@@ -360,7 +376,7 @@ class OnFlySolver:
         os.chdir(org_path)
         return 0
     
-    def _setup_in_file(self, freq_query, angle_query = None):
+    def _setup_in_file(self, freq_query, angle_query_idx = None):
         "assume in self.workingpath && setup .in"
         in_data = self.in_file.open('r').readlines()
         if len(in_data) <= 1:
@@ -370,9 +386,17 @@ class OnFlySolver:
             )
         n_angles, freq, loss_c, precond_mode, skeleton_c = in_data[1].split()
         in_data[1] = " ".join([
-            str(len(angle_query)), str(freq_query), loss_c, 
+            str(len(angle_query_idx)), str(freq_query), loss_c, 
             precond_mode, skeleton_c, "\n"
             ])
+        if len(in_data) - 2 >= len(angle_query_idx):
+            in_data_angles = [in_data[2:][i] for i in angle_query_idx]
+            in_data = [*in_data[:2], *in_data_angles]
+        else:
+            raise RuntimeError(
+                ".in file contains smaller inputs than querried "
+                f"{len(in_data) - 2} < {len(angle_query_idx)}"
+            )
         self.in_file.open('w').write("".join(in_data))
         return 0
     
@@ -470,13 +494,15 @@ class OnFlySolver:
         if freq_query is None: return 0     # pass
         if angle_query is None:
             angle_query = self.angles
+        elif not isinstance(angle_query, Iterable):
+            angle_query = [angle_query]
         print(f"\n ======  Adding Frequency Sample: {freq_query}  ====== \n")
         freq_query = self.encoder(freq_query)
-        angle_query = [self.encoder(a) for a in angle_query]
         org_path = os.getcwd()
         os.chdir(self.workingpath)
         self._setup_simulation(freq_query, angle_query)
-        self._setup_in_file(freq_query, angle_query)
+        angle_query_idx = self._find_index_from_angles(angle_query)
+        self._setup_in_file(freq_query, angle_query_idx)
         log_file_path = f"{self.model_name}.log"
         log_monitor_path = f"{self.workingpath}/compute.log"
 

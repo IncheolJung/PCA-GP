@@ -583,11 +583,12 @@ class OnFlySolver:
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
         if len(farfield_data) != len(angle): 
-            raise RuntimeError("data unmatched with queried angle:\n"
-                               f"datasize {len(farfield_data)} != request {len(self.phi)}\n"
-                               f"at frequency {freq}\n"
-                               f"farfield_file: {Path(farfield_file).absolute().__str__()}\n"
-                               f'{"".join(Path(farfield_file).open('r').readlines())}'
+            raise RuntimeError("data unmatched with queried angle:", 
+                               f"datasize {len(farfield_data)} != request {len(self.phi)}", 
+                               f"at frequency {freq}", 
+                               f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
+                               f'{"".join(Path(farfield_file).open('r').readlines())}', 
+                               sep='\n'
                                )
         farfields_new = {}
         freqs_new = []

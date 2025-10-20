@@ -118,8 +118,8 @@ class OnFlySolver:
                 model_name = glob_domain_file[0].stem
             else:
                 raise RuntimeError(
-                    "One .domain file needs to exist "
-                    f"under {self.workingpath}. "
+                    "One .domain file needs to exist",
+                    f"under {self.workingpath}.",
                     f"Found {len(glob_domain_file)}."
                 )
         self.model_name = model_name
@@ -149,7 +149,7 @@ class OnFlySolver:
             delay = 0.5*self.rank
         else:
             delay = 0.0
-            
+
         self._clean_simulations(delay=delay)
 
         def get_freqs_from_dir(workingpath):
@@ -588,13 +588,14 @@ class OnFlySolver:
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
         if len(farfield_data) != len(angle): 
-            raise RuntimeError("data unmatched with queried angle:", 
-                               f"datasize {len(farfield_data)} != request {len(self.phi)}", 
-                               f"at frequency {freq}", 
-                               f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
-                               f"{''.join(Path(farfield_file).open('r').readlines())}", 
-                               sep='\n'
-                               )
+            raise RuntimeError(
+                "data unmatched with queried angle:", 
+                f"datasize {len(farfield_data)} != request {len(self.phi)}", 
+                f"at frequency {freq}", 
+                f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
+                f"{''.join(Path(farfield_file).open('r').readlines())}", 
+                sep='\n'
+            )
         farfields_new = {}
         freqs_new = []
         for d in farfield_data:
@@ -776,11 +777,12 @@ class OnFlySolverMyMoM:
         if len(current_data) != len(self.nodes): 
             if not len(self.nodes) == 0:
                 raise RuntimeError(
-                    "data unmatched with queried node ID:\n"
-                    f"datasize {len(current_data)} != request {len(self.nodes)}\n"
-                    f"at frequency {freq}\n"
-                    f"farfield_file: {Path(current_file).absolute().__str__()}\n"
-                    f'{"\n".join(Path(current_file).open('r').readlines())}'
+                    "data unmatched with queried node ID:",
+                    f"datasize {len(current_data)} != request {len(self.nodes)}",
+                    f"at frequency {freq}",
+                    f"farfield_file: {Path(current_file).absolute().__str__()}",
+                    f"{'\n'.join(Path(current_file).open('r').readlines())}",
+                    sep='\n'
                 )
         def parse_complex(line:str):
             clean_line = line.strip("\n").strip("(").strip(")")

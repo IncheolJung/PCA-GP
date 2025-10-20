@@ -9,6 +9,17 @@ import time
 from copy import deepcopy
 
 
+        
+def rm_r(path: Path):
+    if path.is_dir():
+        for child in path.iterdir():
+            rm_r(child)  # recurse into children
+        path.rmdir()      # remove the now-empty directory
+    else:
+        path.unlink()     # remove file or symlink
+
+
+
 class fileIOdatareader:
 
     def __init__(self, datapath: Path, print_info=True):
@@ -134,14 +145,9 @@ class OnFlySolver:
             self._init_in_file()        # init .in with dummy freq
         self.tmp = {}               # tmp directories for simulations
 
+        self._clean_simulations(delay=1*self.rank)
+
         def get_freqs_from_dir(workingpath):
-            def rm_r(path: Path):
-                if path.is_dir():
-                    for child in path.iterdir():
-                        rm_r(child)  # recurse into children
-                    path.rmdir()      # remove the now-empty directory
-                else:
-                    path.unlink()     # remove file or symlink
             freqs = []
             for d in Path(workingpath).glob("*/"):
                 if d.is_dir():
@@ -266,23 +272,28 @@ class OnFlySolver:
         return chunks
     
     def _merge_efar_rcs(self, freq, partial_dirs):
-        Path(self.workingpath).mkdir(freq)
-        paratial_dirs = [Path(self.workingpath)/d for d in partial_dirs]
-        merged_dir = Path(self.workingpath)/freq
-        self._cp_all_files(from_dir=paratial_dirs[0], to_dir=merged_dir)
+        merged_dir: Path = Path(self.workingpath)/str(freq)
+        merged_dir.mkdir(exist_ok=True)
+        partial_dirs = [(Path(self.workingpath)/d).absolute() for d in partial_dirs]
+        self._cp_all_files(from_dir=partial_dirs[0], to_dir=merged_dir)
         efar_file = merged_dir/f"{self.model_name}.efar"
         rcs_file = merged_dir/f"{self.model_name}.rcs"
         efar_header = efar_file.open('r').readlines()[:1]
         rcs_header = rcs_file.open('r').readlines()[:1]
         efar_data, rcs_data = [], []
         for d in partial_dirs:
-            efar_data.extend((d/f"{self.model_name}.efar").open('r').readlines()[1:])
-            rcs_data.extend((d/f"{self.model_name}.rcs").open('r').readlines()[1:])
-        exit_code_efar = efar_file.open('w').write(''.join(*efar_header, *efar_data))
-        exit_code_rcs = rcs_file.open('w').write(''.join(*rcs_header, *rcs_data))
+            efar_data.extend(
+                (d/f"{self.model_name}.efar").open('r').readlines()[1:]
+            )
+            rcs_data.extend(
+                (d/f"{self.model_name}.rcs").open('r').readlines()[1:]
+            )
+        exit_code_efar = efar_file.open('w').write(''.join([*efar_header, *efar_data]))
+        exit_code_rcs = rcs_file.open('w').write(''.join([*rcs_header, *rcs_data]))
         return exit_code_efar + exit_code_rcs
     
-    def _clean_simulations(self):
+    def _clean_simulations(self, delay=0.0):
+        time.sleep(delay)
         # complete_freqs = Path(self.workingpath).glob("*")
         partial_dirs = list(Path(self.workingpath).glob("*[[]*[]]"))
         partial_dirs = [d.name for d in sorted(partial_dirs) 
@@ -290,29 +301,48 @@ class OnFlySolver:
         partial_freqs = list(set([d[:d.index("_[")] for d in partial_dirs]))
         for freq in partial_freqs:
             partials_for_this_freq = [d for d in partial_dirs if freq in d]
-            start_glob, end_glob = [], []
+            start_list, end_list = [], []
             for p in partials_for_this_freq:
                 # suppose dirname is "frequency_[i1_i2]"
-                start, end = p[len(freq)+2:-1].split('_')
-                start_glob.append(start)
-                end_glob.append(end)
-            start_glob, end_glob = sorted(start_glob), sorted(end_glob)
-            index_series = [*zip(start_glob, end_glob)]
-            index_series = [i for start, end in index_series 
-                            for i in range(start, end + 1)]
-            index_diff = [index_series[i+1]-index_series[i] 
-                          for i in range(len(index_series)-1)]
-            index_head_tail = [i for i in index_diff if i != 1]
-            if len(index_head_tail) == 2:
-                head, tail = index_head_tail
+                start, end = map(int, p[len(freq)+2:-1].split('_'))
+                start_list.append(start)
+                end_list.append(end)
+            start_list, end_list = sorted(start_list), sorted(end_list)
+            start_glob, end_glob = start_list.pop(0), end_list.pop(0)
+            index_list = []
+            while start_list and end_list:
+                start_i, end_i = start_list.pop(0), end_list.pop(0)
+                if start_i == end_glob+1:   # sequential: e.g., [[..., 5], [6, ...]]
+                    end_glob = end_i
+                else:
+                    index_list.append((start_glob, end_glob))
+                    start_glob, end_glob = start_i, end_i
+            index_list.append((start_glob, end_glob))
+            if len(index_list) == 1:
+                head, tail = index_list[0]
                 if (head==0) and (tail==self.n_angles-1):
-                    self._merge_efar_rcs(freq, partials_for_this_freq)
+                    if all([(Path(self.workingpath)/d).exists() for d in partials_for_this_freq]):
+                        self._merge_efar_rcs(float(freq), partials_for_this_freq)
+                        for d in partials_for_this_freq:
+                            rm_r(Path(self.workingpath)/d)
+                    else:
+                        print(
+                            f"partials_for_this_freq {freq} no longer exists: "
+                            f"{partials_for_this_freq}"
+                        )
+                else:
+                    print(
+                        f"Broken simulation at {freq}. "
+                        f"Stored index are {index_list} "
+                        f"while [0, {self.n_angles-1}] is required"
+                    )
             else:
                 print(
                     f"Broken simulation at {freq}. "
-                    f"Stored index are {index_head_tail} "
+                    f"Stored index are {index_list} "
                     f"while [0, {self.n_angles-1}] is required"
                 )
+
         return 0
     
     def __call__mpi(self, freq, angle, delay=0):
@@ -350,8 +380,8 @@ class OnFlySolver:
                     raise RuntimeError(
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
+            self._clean_simulations(delay=0.5*self.rank)
             self.comm.Barrier()
-            self._clean_simulations()
             if self.rank == 0:
                 return np.array([self.__call__openmp(f, angle) for f in freq])
             else:

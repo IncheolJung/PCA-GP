@@ -588,12 +588,13 @@ class OnFlySolver:
         freq = self.encoder(freq)
         farfield_data = Path(farfield_file).open('r').readlines()[1:]
         if len(farfield_data) != len(angle): 
+            farfield_data_from_file = ''.join(Path(farfield_file).open('r').readlines())
             raise RuntimeError(
                 "data unmatched with queried angle:", 
                 f"datasize {len(farfield_data)} != request {len(self.phi)}", 
                 f"at frequency {freq}", 
                 f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
-                f"{''.join(Path(farfield_file).open('r').readlines())}", 
+                f"{farfield_data_from_file}", 
                 sep='\n'
             )
         farfields_new = {}
@@ -776,12 +777,13 @@ class OnFlySolverMyMoM:
         current_data = Path(current_file).open('r').readlines()[1:]
         if len(current_data) != len(self.nodes): 
             if not len(self.nodes) == 0:
+                current_data_from_file = '\n'.join(Path(current_file).open('r').readlines())
                 raise RuntimeError(
                     "data unmatched with queried node ID:",
                     f"datasize {len(current_data)} != request {len(self.nodes)}",
                     f"at frequency {freq}",
                     f"farfield_file: {Path(current_file).absolute().__str__()}",
-                    f"{'\n'.join(Path(current_file).open('r').readlines())}",
+                    f"{current_data_from_file}",
                     sep='\n'
                 )
         def parse_complex(line:str):

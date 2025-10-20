@@ -587,7 +587,7 @@ class OnFlySolver:
                                f"datasize {len(farfield_data)} != request {len(self.phi)}", 
                                f"at frequency {freq}", 
                                f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
-                            #    f'{"".join(Path(farfield_file).open('r').readlines())}', 
+                               f"{''.join(Path(farfield_file).open('r').readlines())}", 
                                sep='\n'
                                )
         farfields_new = {}

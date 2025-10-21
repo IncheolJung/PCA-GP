@@ -161,14 +161,16 @@ class OnFlySolver:
                     except ValueError: rm_r(d)
             return freqs
         
-        if usempi:
-            if self.rank == 0:
-                freqs_computed_before = get_freqs_from_dir(workingpath)
-            else:
-                freqs_computed_before = None
-            freqs_computed_before = self.comm.bcast(freqs_computed_before, root=0)
-        else:
-            freqs_computed_before = get_freqs_from_dir(workingpath)
+        # if usempi:
+        #     if self.rank == 0:
+        #         freqs_computed_before = get_freqs_from_dir(workingpath)
+        #     else:
+        #         freqs_computed_before = None
+        #     freqs_computed_before = self.comm.bcast(freqs_computed_before, root=0)
+        # else:
+        #     freqs_computed_before = get_freqs_from_dir(workingpath)
+        
+        freqs_computed_before = get_freqs_from_dir(workingpath)
         
         if len(freqs_computed_before) > 0:
             for freq in freqs_computed_before:

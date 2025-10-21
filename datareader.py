@@ -358,7 +358,12 @@ class OnFlySolver:
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
-        if not isinstance(dirname, Path) and isinstance(dirname, Iterable):
+        if not isinstance(dirname, Path):
+            try: 
+                dirname = Path(dirname)
+            except ValueError:
+                dirname = [Path(d) for d in dirname]
+        if isinstance(dirname, Iterable):
             dirname = ' '.join(str(dirname))
         else:
             dirname = str(dirname)

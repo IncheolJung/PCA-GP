@@ -103,6 +103,7 @@ class OnFlySolver:
             self.rank = mpicomm.Get_rank()
             self.size = mpicomm.Get_size()
             print(f"[Rank {self.rank}] starting work...")
+            self.root_ip = self._get_hostname(rank=0)
 
         self.init_args = [
             workingpath, model_name, init_freqs, 
@@ -341,8 +342,8 @@ class OnFlySolver:
                         f"Broken simulation at {freq}. "
                         f"Stored index are {index_list} "
                         f"while [0, {self.n_angles-1}] is required"
-                        "Attempting to gather simulations to root..."
                     )
+                    print("Attempting to gather simulations to root...")
                     partials_for_this_freq = [Path(self.workingpath)/d 
                                               for d in partials_for_this_freq]
                     self._transfer_dir_to_root(partials_for_this_freq)
@@ -357,28 +358,43 @@ class OnFlySolver:
     
     def _transfer_dir_to_root(self, dirname: Path):
         if isinstance(dirname, Iterable):
-            return sum(self._transfer_dir_to_root(d) for d in dirname)
-        return sum(self._transfer_file_to_root(str(f.absolute())) 
-                for f in dirname.absolute().glob('*')
-                if f.is_file())
-    
-    def _transfer_file_to_root(self, filename: str):
-        if self.rank != 0:
-            # Worker reads its local result
-            with open(filename, "rb") as f:
-                data = f.read()
-            # Send file to master
-            self.comm.send((filename, data), dest=0)
-        else:
-            # Master node receives files from all workers
-            for worker in range(1, self.size):
-                fname, data = self.comm.recv(source=worker)
-                # Save to master's directory
-                if not Path(fname).parent.exists():
-                    Path(fname).parent.mkdir()
-                with open(fname, "wb") as f:
-                    f.write(data)
+            dirname = ' '.join(dirname)
+        from subprocess import Popen, STDOUT, PIPE
+        dest = f"{self.root_ip}:{self.workingpath}"
+        prog = Popen(['scp', '-r', dirname, dest])
+        prog.wait()
         return 0
+    
+    def _get_hostname(self, rank: int = 0):
+        with open('hosts.txt', 'r') as f:
+            ip_addr = f.readlines()[rank].split()
+            if len(ip_addr)==2: ip_addr = ip_addr[0]
+        return ip_addr
+    
+    # def _transfer_dir_to_root(self, dirname: Path):
+    #     if isinstance(dirname, Iterable):
+    #         return sum(self._transfer_dir_to_root(d) for d in dirname)
+    #     return sum(self._transfer_file_to_root(str(f.absolute())) 
+    #             for f in dirname.absolute().glob('*')
+    #             if f.is_file())
+    
+    # def _transfer_file_to_root(self, filename: str):
+    #     if self.rank != 0:
+    #         # Worker reads its local result
+    #         with open(filename, "rb") as f:
+    #             data = f.read()
+    #         # Send file to master
+    #         self.comm.send((filename, data), dest=0)
+    #     else:
+    #         # Master node receives files from all workers
+    #         for worker in range(1, self.size):
+    #             fname, data = self.comm.recv(source=worker)
+    #             # Save to master's directory
+    #             if not Path(fname).parent.exists():
+    #                 Path(fname).parent.mkdir()
+    #             with open(fname, "wb") as f:
+    #                 f.write(data)
+    #     return 0
     
     def __call__mpi(self, freq, angle, delay=0):
         # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores

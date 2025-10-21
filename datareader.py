@@ -186,8 +186,8 @@ class OnFlySolver:
         # self.__call__(self.freqs, self.angles)
 
         if usempi:
-            self.comm.Barrier()
             print(f"[Rank {self.rank}] finished data loading")
+            self.comm.Barrier()
             results = self.__call__mpi(self.freqs, self.angles)
         else:
             print(f"[OnFlySolver] finished data loading")

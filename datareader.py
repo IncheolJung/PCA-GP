@@ -174,7 +174,10 @@ class OnFlySolver:
         
         if len(freqs_computed_before) > 0:
             for freq in freqs_computed_before:
-                self._load_farfield_data(f"{self.workingpath}/{freq}/{self.model_name}.efar")
+                self._load_farfield_data(
+                    f"{self.workingpath}/{freq}/{self.model_name}.efar",
+                    freq=freq
+                )
         
         # if usempi:
         #     self.comm.Barrier()

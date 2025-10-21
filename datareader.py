@@ -175,11 +175,13 @@ class OnFlySolver:
         if self.usempi:
             print(f"[Rank {self.rank}] frequency parsed from directories")
         
+        self.usempi = False
         for freq in freqs_computed_before:
             self._load_farfield_data(
                 f"{self.workingpath}/{freq}/{self.model_name}.efar",
                 freq=freq
             )
+        self.usempi = usempi
         
         # if usempi:
         #     self.comm.Barrier()

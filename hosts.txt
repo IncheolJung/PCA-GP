@@ -1,2 +1,2 @@
-localhost
-office-tailscale
+100.79.171.75 slots=1
+100.96.245.93 slots=1

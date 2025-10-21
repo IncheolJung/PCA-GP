@@ -145,12 +145,12 @@ class OnFlySolver:
             self._init_in_file()        # init .in with dummy freq
         self.tmp = {}               # tmp directories for simulations
 
-        # if self.usempi: 
-        #     delay = 0.5*self.rank
-        # else:
-        #     delay = 0.0
+        if self.usempi: 
+            delay = 0.5*self.rank
+        else:
+            delay = 0.0
 
-        # self._clean_simulations(delay=delay)
+        self._clean_simulations(delay=delay)
 
         def get_freqs_from_dir(workingpath):
             freqs = []
@@ -326,7 +326,8 @@ class OnFlySolver:
             if len(index_list) == 1:
                 head, tail = index_list[0]
                 if (head==0) and (tail==self.n_angles-1):
-                    if all([(Path(self.workingpath)/d).exists() for d in partials_for_this_freq]):
+                    if all([(Path(self.workingpath)/d).exists() 
+                            for d in partials_for_this_freq]):
                         self._merge_efar_rcs(float(freq), partials_for_this_freq)
                         for d in partials_for_this_freq:
                             rm_r(Path(self.workingpath)/d)
@@ -336,6 +337,9 @@ class OnFlySolver:
                             f"{partials_for_this_freq}"
                         )
                 else:
+                    partials_for_this_freq = [Path(self.workingpath)/d 
+                                              for d in partials_for_this_freq]
+                    self._transfer_dir_to_root(partials_for_this_freq)
                     print(
                         f"Broken simulation at {freq}. "
                         f"Stored index are {index_list} "
@@ -348,6 +352,29 @@ class OnFlySolver:
                     f"while [0, {self.n_angles-1}] is required"
                 )
 
+        return 0
+    
+    def _transfer_dir_to_root(self, dirname: Path):
+        if isinstance(dirname, Iterable):
+            return sum(self._transfer_dir_to_root(d) for d in dirname)
+        return sum(self._transfer_file_to_root(str(f.absolute())) 
+                   for f in dirname.absolute().glob('*')
+                   if f.is_file())
+    
+    def _transfer_file_to_root(self, filename: str):
+        if self.rank != 0:
+            # Worker reads its local result
+            with open(filename, "rb") as f:
+                data = f.read()
+            # Send file to master
+            self.comm.send((filename, data), dest=0)
+        else:
+            # Master node receives files from all workers
+            for worker in range(1, self.size):
+                fname, data = self.comm.recv(source=worker)
+                # Save to master's directory
+                with open(fname, "wb") as f:
+                    f.write(data)
         return 0
     
     def __call__mpi(self, freq, angle, delay=0):

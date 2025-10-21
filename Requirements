@@ -1,0 +1,12 @@
+Python modules:
+	- gpytorch
+	- scikit-learn
+	- numpy
+	- scipy
+	- matplotlib
+	- mpi4py
+	- openmp (the same version as you have in system)
+
+system modules:
+	- openmp (the same version as the Python module)
+	- rsync

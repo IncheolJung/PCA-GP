@@ -373,6 +373,8 @@ class OnFlySolver:
         print(f"[Rank {self.rank}] calling {cmd}")
         prog = Popen(['rsync', '-az', dirs_str, dest])
         prog.wait()
+        prog = Popen(['rm', '-r', dirs_str])
+        prog.wait()
         return 0
     
     def _get_hostname(self, rank: int = 0):

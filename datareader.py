@@ -145,12 +145,12 @@ class OnFlySolver:
             self._init_in_file()        # init .in with dummy freq
         self.tmp = {}               # tmp directories for simulations
 
-        if self.usempi: 
-            delay = 0.5*self.rank
-        else:
-            delay = 0.0
+        # if self.usempi: 
+        #     delay = 0.5*self.rank
+        # else:
+        #     delay = 0.0
 
-        self._clean_simulations(delay=delay)
+        # self._clean_simulations(delay=delay)
 
         def get_freqs_from_dir(workingpath):
             freqs = []

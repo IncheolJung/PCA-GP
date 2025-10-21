@@ -358,18 +358,20 @@ class OnFlySolver:
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
-        if not isinstance(dirname, Path):
-            try: 
-                dirname = Path(dirname)
-            except TypeError:
-                dirname = [Path(d) for d in dirname]
-        if isinstance(dirname, Iterable):
-            dirname = ' '.join(str(dirname))
+        # Normalize input to list of Path objects
+        if isinstance(dirname, (str, Path)):
+            dirs = [Path(dirname)]
         else:
-            dirname = str(dirname)
+            dirs = [Path(d) for d in dirname]
+
+        # Convert to strings
+        dirs_str = ' '.join([str(d) for d in dirs])
+
         from subprocess import Popen, STDOUT, PIPE
         dest = f"{self.root_ip}:{self.workingpath}"
-        prog = Popen(['rsync', '-az', dirname, dest])
+        cmd = ' '.join(['rsync', '-az', dirs_str, dest])
+        print(f"[Rank {self.rank}] calling {cmd}")
+        prog = Popen(['rsync', '-az', dirs_str, dest])
         prog.wait()
         return 0
     

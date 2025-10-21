@@ -171,6 +171,9 @@ class OnFlySolver:
         #     freqs_computed_before = get_freqs_from_dir(workingpath)
         
         freqs_computed_before = get_freqs_from_dir(workingpath)
+
+        if usempi:
+            print(f"[Rank {self.rank}] frequency parsed from directories")
         
         if len(freqs_computed_before) > 0:
             for freq in freqs_computed_before:
@@ -188,10 +191,10 @@ class OnFlySolver:
         if usempi:
             print(f"[Rank {self.rank}] finished data loading")
             # self.comm.Barrier()
-            results = self.__call__mpi(self.freqs, self.angles)
+            _ = self.__call__mpi(self.freqs, self.angles)
         else:
             print(f"[OnFlySolver] finished data loading")
-            results = self.__call__openmp(self.freqs, self.angles)
+            _ = self.__call__openmp(self.freqs, self.angles)
 
         if usempi:
             self.comm.Barrier()

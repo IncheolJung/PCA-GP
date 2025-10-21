@@ -357,13 +357,9 @@ class OnFlySolver:
     def _transfer_dir_to_root(self, dirname: Path):
         if isinstance(dirname, Iterable):
             return sum(self._transfer_dir_to_root(d) for d in dirname)
-        if self.rank == 0:
-            dirname.mkdir()
-            return 0
-        else:
-            return sum(self._transfer_file_to_root(str(f.absolute())) 
-                    for f in dirname.absolute().glob('*')
-                    if f.is_file())
+        return sum(self._transfer_file_to_root(str(f.absolute())) 
+                for f in dirname.absolute().glob('*')
+                if f.is_file())
     
     def _transfer_file_to_root(self, filename: str):
         if self.rank != 0:
@@ -377,6 +373,8 @@ class OnFlySolver:
             for worker in range(1, self.size):
                 fname, data = self.comm.recv(source=worker)
                 # Save to master's directory
+                if not Path(fname).parent.exists():
+                    Path(fname).parent.mkdir()
                 with open(fname, "wb") as f:
                     f.write(data)
         return 0

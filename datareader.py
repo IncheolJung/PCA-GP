@@ -357,8 +357,10 @@ class OnFlySolver:
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
-        if isinstance(dirname, Iterable):
-            dirname = ' '.join(dirname)
+        if not isinstance(dirname, Path) and isinstance(dirname, Iterable):
+            dirname = ' '.join(str(dirname))
+        else:
+            dirname = str(dirname)
         from subprocess import Popen, STDOUT, PIPE
         dest = f"{self.root_ip}:{self.workingpath}"
         prog = Popen(['scp', '-r', dirname, dest])

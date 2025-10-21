@@ -363,7 +363,7 @@ class OnFlySolver:
             dirname = str(dirname)
         from subprocess import Popen, STDOUT, PIPE
         dest = f"{self.root_ip}:{self.workingpath}"
-        prog = Popen(['scp', '-r', '-A', dirname, dest])
+        prog = Popen(['rsync', '-az', dirname, dest])
         prog.wait()
         return 0
     

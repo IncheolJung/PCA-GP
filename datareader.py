@@ -361,7 +361,7 @@ class OnFlySolver:
         if not isinstance(dirname, Path):
             try: 
                 dirname = Path(dirname)
-            except ValueError:
+            except TypeError:
                 dirname = [Path(d) for d in dirname]
         if isinstance(dirname, Iterable):
             dirname = ' '.join(str(dirname))

@@ -337,14 +337,15 @@ class OnFlySolver:
                             f"{partials_for_this_freq}"
                         )
                 else:
-                    partials_for_this_freq = [Path(self.workingpath)/d 
-                                              for d in partials_for_this_freq]
-                    self._transfer_dir_to_root(partials_for_this_freq)
                     print(
                         f"Broken simulation at {freq}. "
                         f"Stored index are {index_list} "
                         f"while [0, {self.n_angles-1}] is required"
+                        "Attempting to gather simulations to root..."
                     )
+                    partials_for_this_freq = [Path(self.workingpath)/d 
+                                              for d in partials_for_this_freq]
+                    self._transfer_dir_to_root(partials_for_this_freq)
             else:
                 print(
                     f"Broken simulation at {freq}. "

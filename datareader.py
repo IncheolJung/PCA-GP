@@ -378,10 +378,10 @@ class OnFlySolver:
         # Convert to strings
         dirs_str = ' '.join([str(d) for d in dirs])
 
-        from subprocess import Popen, STDOUT, PIPE
+        from subprocess import Popen
         dest = f"{self.root_ip}:{self.workingpath}"
-        cmd = ' '.join(['rsync', '-az', dirs_str, dest])
-        print(f"[Rank {self.rank}] calling {cmd}")
+        # cmd = ' '.join(['rsync', '-az', dirs_str, dest])
+        # print(f"[Rank {self.rank}] {cmd}")
         prog = Popen(['rsync', '-az', dirs_str, dest])
         prog.wait()
         prog = Popen(['rm', '-r', dirs_str])
@@ -549,7 +549,10 @@ class OnFlySolver:
     def _add_farfield(self, new_farfield):
         if self.usempi:
             # print(f"[Rank: {self.rank}] calling _add_farfield")
-            farfields_local_keys, farfields_local_vals = zip(*new_farfield.items())
+            if len(new_farfield):
+                farfields_local_keys, farfields_local_vals = zip(*new_farfield.items())
+            else:
+                farfields_local_keys, farfields_local_vals = [], []
             farfields_keys = self.comm.gather(farfields_local_keys, root=0)
             farfields_vals = self.comm.gather(farfields_local_vals, root=0)
             if self.rank == 0:

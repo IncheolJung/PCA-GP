@@ -257,6 +257,7 @@ def main():
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
     workingpath = config.path
+    print(f"[Rank {rank}] {workingpath}")
     if workingpath is None:
         workingpath = "./data/VWT-data/circylinder"
         if (not usempi) or (usempi and rank==0):
@@ -266,6 +267,7 @@ def main():
                 "Fall back to default:", workingpath, '\n', 
                 "#"*50, "\n"*2,
                 )
+    print(f"[Rank {rank}] {workingpath}")
 
     # solver = OnFlySolver(
     #     workingpath="./data/VWT-data/sphere",

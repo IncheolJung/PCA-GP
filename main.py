@@ -325,7 +325,10 @@ def main():
         dir_out.mkdir()
         stdout = Tee(dir_out/"GP_results.log", "w")     # Log file setup
         print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
-        print(f"  >> Simulation path: {workingpath}")
+        if usempi:
+            print(f"  >> Simulation path: [Rank {rank}] {workingpath}")
+        else:
+            print(f"  >> Simulation path: {workingpath}")
         print(f"  >> Adaptive basis: {adaptive_basis}")
         print(f"  >> Acquisition function: {acquisition_function_candidate[acquisition_function]}")
         print(f"  >> X normalization strategy: {Xnormalizer_type_candidate[Xnormalizer_type]}")

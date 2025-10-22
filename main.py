@@ -29,7 +29,7 @@ except ImportError:
     size=None   # dummy size
 
 
-def configuration():
+def parse_args(default_values = None):
     from argparse import ArgumentParser
     ac_fx_types = [
         "maximum variance", "expected improvement", "upper confidence bound"
@@ -44,53 +44,176 @@ def configuration():
     sweeping_types = [
         "phi", "theta"
         ]
+    if default_values is None:
+        default_values = [
+            None, None, ['0', '180', '181'], '0', ["9500", "10500", "101"], 'false', 
+            '0', '1', '3', '1', '3', '0', '20', '1e-3'
+        ]
     parser = ArgumentParser()
     parser.add_argument(
-        "-p", "--path-simulation", dest="path", default=None, 
+        "-p", "--path-simulation", dest="path", default=default_values[0], 
         help=f"User defined simulation directory")
     parser.add_argument(
-        "-m", "--model-name", dest="model", default=None, 
+        "-m", "--model-name", dest="model", default=default_values[1], 
         help=f"model name (stem of .domain file) to simulate")
     parser.add_argument(
         "-A", "--angle", "--angle-settings", nargs=3, 
-        default=["0", "180", "181"], 
+        default=default_values[2], 
         help=f"[start, end, number] of the angular sweep")
     parser.add_argument(
-        "-S", "--ast", "--angular-sweep-type", default="0", 
+        "-S", "--ast", "--angular-sweep-type", default=default_values[3], 
         help=f"type of angular sweep {sweeping_types}")
     parser.add_argument(
         "-F", "--freq", "--frequency-settings", nargs=3, 
-        default=["9500", "10500", "101"], 
+        default=default_values[4], 
         help=f"[start, end, number] of the frequency sweep")
     parser.add_argument(
-        "-v", "--validate", action="store_true", 
+        "-v", "--validate", 
+        action=f"store_{str(not bool(default_values[5])).lower()}", 
         help=f"flag for validation")
     parser.add_argument(
         "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", 
-        default="0", 
+        default=default_values[6], 
         help=f"type of acquisition function {ac_fx_types}")
     parser.add_argument(
-        "-x", "--xn", "--X-normalizer", dest="xn", default="1", 
+        "-x", "--xn", "--X-normalizer", dest="xn", default=default_values[7], 
         help=f"type of X-normalizer {xnorm_types}")
     parser.add_argument(
-        "-n", "--n-init", dest="n", default="3", 
+        "-n", "--n-init", dest="n", default=default_values[8], 
         help=f"initial number of frequency samples")
     parser.add_argument(
-        "--add", "--freq-add", default="1",
+        "--add", "--freq-add", default=default_values[9],
         help=f"number of added frequency samples per Gaussian Process iteration")
     parser.add_argument(
-        "-t", "--terms", dest="t", default="3", 
+        "-t", "--terms", dest="t", default=default_values[10], 
         help=f"number of terms [stacked-RBFP and LF-NSM]")
     parser.add_argument(
-        "-s", "--sample", "--sampling-strategy", dest="s", default="0", 
+        "-s", "--sample", "--sampling-strategy", dest="s", default=default_values[11], 
         help=f"type of sampling strategy {sampling_types}")
     parser.add_argument(
-        "-i", "--max-iter", dest="i", default="20", 
+        "-i", "--max-iter", dest="i", default=default_values[12], 
         help=f"maximum iteration. maximum samples = n_init + max_iter")
     parser.add_argument(
-        "-T", "--tol", dest="tol", default="1e-3", 
+        "-T", "--tol", dest="tol", default=default_values[13], 
         help=f"tolerance for varinace. terminates iteration if tol > var")
     return parser.parse_args()
+
+
+def read_config(filename):
+    config_values = [
+        line.strip('\n').split() 
+        for line in open(filename, 'r').readlines() 
+        if not line.strip(' ').startswith('#') or line.strip(' ').startswith('//')
+    ]
+    config_values = [
+        line[0] if len(line)==1 else line 
+        for line in config_values
+    ]
+    return config_values
+
+
+def write_config(filename, config: dict):
+    if Path(filename).exists(): # if file exists, leave the names there
+        config_values = list(map(str, config.values()))
+        config_keys = []
+        for line in open(filename, 'r').readlines():
+            if line.strip(' ').startswith('#') or line.strip(' ').startswith('//'):
+                config_keys.append(line.strip('\n'))
+            else:
+                config_keys.append('\n')
+        config_keys = (''.join(config_keys)).split('\n')
+        config_keys = [k for k in config_keys if k!='']
+        if len(config_keys) != len(config_values): 
+            if usempi: prefix=f"[Rank {rank}]" 
+            print(prefix, filename, 
+                  'is corrupted: len(config_keys) != len(config_values)\n ' 
+                  'Will attempt to extend the shorter list to write config file. ' 
+                  'The user is encouraged to check the configuration file afterwards.' 
+            ) 
+            if len(config_keys) > len(config_values): 
+                config_values.extend(['']*(len(config_keys) - len(config_values))) 
+            if len(config_keys) < len(config_values): 
+                config_keys.extend(['']*(len(config_values) - len(config_keys)))
+        config = {k:v for k,v in zip(config_keys, config_values)}
+    data = '\n'.join(['\n'.join([f"{k}", f"{v}"]) for k,v in config.items()])
+    open(filename, 'w').write(data)
+    return 0
+    
+
+def get_configuration():
+    def get_config_defaults(
+            num_config_sim, num_config_gp, config_sim_filename, config_gp_filename
+        ):
+        ### Read config from file ###
+        try:
+            config_sim_from_file = read_config(config_sim_filename)
+            if not config_sim_from_file or len(config_sim_from_file) != num_config_sim:
+                raise FileNotFoundError
+        except FileNotFoundError:
+            config_sim_from_file = [
+                None, None, ['0', '180', '181'], '0', 
+                ["9500", "10500", "101"], 'false'
+            ]
+        try:
+            config_gp_from_file = read_config(config_gp_filename)
+            if not config_gp_from_file or len(config_sim_from_file) != num_config_gp:
+                raise FileNotFoundError
+        except FileNotFoundError:
+            config_gp_from_file = ['0', '1', '3', '1', '3', '0', '20', '1e-3']
+        ### Read config from args ###
+        config_defaults = [*config_sim_from_file, *config_gp_from_file]
+        if len(config_defaults) != num_config_sim + num_config_gp:
+            config_defaults = None
+        return config_defaults
+    ### config names (used to write config file) ###
+    config_sim_key = [
+        'Simulation Path', 'Simulation (Model) Name', 
+        'Input Angle Settings', 
+        'Angular Sweep Type (0: phi-sweep, 1: theta-sweep)', 
+        'Frequency Settings',
+        'Validate?']
+    config_gp_key = [
+        'Acquisition Function Type (0: maximum variance, '
+        '1: expected improvement, 2: upper confidence bound)',
+        'X normalization Type (0: do not normalize, 1: z-score, 2: min-max, '
+        '3: power transform, 4: standardized power transform, 5: scaled z-score)',
+        'Number of Initial Samples', 'Sampling Addition per Iteration',
+        'Number of Terms (LF-NSM Kernel Parameter)',
+        'Sampling Strategy (0: grid, 1: latin-hypercube)',
+        'Maximum Iteration for Gaussian Process', 'Prediction Energy Tolerance'
+    ]
+    num_config_sim, num_config_gp = len(config_sim_key), len(config_gp_key)
+    config_sim_filename = 'config_simulation.cfg'
+    config_gp_filename = 'config_gaussian_process.cfg'
+    ### Begin config parsing ###
+    config_defaults = get_config_defaults(
+        num_config_sim, num_config_gp, 
+        config_sim_filename, config_gp_filename
+    )
+    if usempi:
+        if rank==0:
+            config = parse_args(config_defaults)
+            config = vars(config)
+        else:
+            config = None
+        ### Broadcast config from rank 0 to all ###
+        config = comm.bcast(config, root=0)
+        from argparse import Namespace
+        config = Namespace(**config)
+    else:
+        config = parse_args(config_defaults)
+    ### Write config to file ###
+    config_values = list(vars(config).values())
+    config_sim_values, config_gp_values = config_values[:num_config_sim], config_values[num_config_sim:]
+    for i, v in enumerate(config_sim_values):
+        try: config_sim_values[i] = ' '.join(list(v))
+        except (ValueError, TypeError): pass
+    assert(num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values))
+    config_sim_dict = {f"### {k} ###":v for k,v in zip(config_sim_key, config_sim_values)}
+    config_gp_dict = {f"### {k} ###":v for k,v in zip(config_gp_key, config_gp_values)}
+    write_config(config_sim_filename, config_sim_dict)
+    write_config(config_gp_filename, config_gp_dict)
+    return config
 
 
 def validate(*args):
@@ -108,7 +231,7 @@ def validate(*args):
         f_test = np.array(f_test)
 
         # Predict at new frequency
-        pred  = rbgp.reconstruct(f_test)
+        pred = rbgp.reconstruct(f_test)
         print("\n ======  Final Statistics  ====== \n")
         print("Predicted response shape:", pred.shape)
         print("RMSE:{:.12f}".format(np.mean(np.square(np.abs(pred - truth))) / np.mean(np.square(np.abs(truth)))) )
@@ -219,18 +342,7 @@ def export(file_path, np_data, freqs, theta, phi):
 
 
 def main():
-    if usempi:
-        if rank==0:
-            config = configuration()
-            config = vars(config)
-        else:
-            config = None
-        # Broadcast config from rank 0 to all
-        config = comm.bcast(config, root=0)
-        from types import SimpleNamespace
-        config = SimpleNamespace(**config)
-    else:
-        config = configuration()
+    config = get_configuration()
     # -----------------------
     # CONFIG
     # -----------------------
@@ -329,8 +441,6 @@ def main():
     # -----------------------
     # OUTPUT DRIECTORY SETUP
     # -----------------------
-    if usempi:
-        print(f"  >> Simulation path: [Rank {rank}] {workingpath}")
     if (not usempi) or (usempi and rank==0):
         dir_out = Path("out")
         simulation_number = len([d for d in dir_out.glob("*") if d.is_dir()]) + 1

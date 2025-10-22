@@ -110,22 +110,15 @@ def read_config(filename):
         for line in open(filename, 'r').readlines() 
         if not is_comment(line)     # only read non-comment
     ]
-    # for i, line in enumerate(config_values):
-    #     if len(line)==1:   # single arg
-    #         newline = line[0]
-    #         try:
-    #             newline = int(newline)
-    #     else:   # multiple args are always floats
-    #         newline = map(float, line)
-    #     config_values[i] = newline
-    config_values = [
-        line[0] if len(line)==1 else line   # parse multiple args
-        for line in config_values
-    ]
-    config_values = [
-        None if line=='None' else line  # parse None
-        for line in config_values
-    ]
+    for i, line in enumerate(config_values):
+        if len(line)==1:    # parse single arg
+            newline = line[0]
+            if newline=='None': newline = None  # parse None
+            elif newline.lower()=='true': newline = True  # parse True
+            elif newline.lower()=='false': newline = False  # parse False
+            else: pass  # pass
+        else: newline = list(map(float, line))   # parse multiple args (always float)
+        config_values[i] = newline
     return config_values
 
 
@@ -227,7 +220,7 @@ def get_configuration():
             v_is_iterable = isinstance(v, (list, tuple, np.ndarray))
             v_is_list_str = isinstance(v, str) and v.strip(' ').strip('\t').startswith('[')
             if v_is_iterable or v_is_list_str:
-                config_sim_values[i] = ' '.join(list(v))
+                config_sim_values[i] = ' '.join(list(map(str, v)))
         assert(num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values))
         config_sim_dict = {f"### {k} ###":v for k,v in zip(config_sim_key, config_sim_values)}
         config_gp_dict = {f"### {k} ###":v for k,v in zip(config_gp_key, config_gp_values)}
@@ -443,7 +436,7 @@ def main():
     config.path = solver.workingpath
     config.model = solver.model_name
     parse_and_write_config(config)
-    # raise Exception
+    raise Exception
 
     # solver = OnFlySolverMyMoM(
     #     workingpath="./data/MoM-data/spiral-theta90",

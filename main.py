@@ -110,6 +110,14 @@ def read_config(filename):
         for line in open(filename, 'r').readlines() 
         if not is_comment(line)     # only read non-comment
     ]
+    # for i, line in enumerate(config_values):
+    #     if len(line)==1:   # single arg
+    #         newline = line[0]
+    #         try:
+    #             newline = int(newline)
+    #     else:   # multiple args are always floats
+    #         newline = map(float, line)
+    #     config_values[i] = newline
     config_values = [
         line[0] if len(line)==1 else line   # parse multiple args
         for line in config_values
@@ -357,7 +365,6 @@ def export(file_path, np_data, freqs, theta, phi):
 
 def main():
     config, parse_and_write_config = get_configuration()
-    print(config)
     # -----------------------
     # CONFIG
     # -----------------------
@@ -436,7 +443,7 @@ def main():
     config.path = solver.workingpath
     config.model = solver.model_name
     parse_and_write_config(config)
-    raise Exception
+    # raise Exception
 
     # solver = OnFlySolverMyMoM(
     #     workingpath="./data/MoM-data/spiral-theta90",

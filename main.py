@@ -226,7 +226,7 @@ def main():
         else:
             config = None
         # Broadcast config from rank 0 to all
-        config = comm.Bcast(config, root=0)
+        config = comm.bcast(config, root=0)
         from types import SimpleNamespace
         config = SimpleNamespace(**config)
     else:

@@ -182,6 +182,8 @@ class OnFlySolver:
                 freq=freq
             )
         self.usempi = usempi
+        if self.usempi:
+            self._sync_data()
         
         # if usempi:
         #     self.comm.Barrier()
@@ -391,6 +393,24 @@ class OnFlySolver:
             ip_addr = f.readlines()[rank].split()
             if len(ip_addr)==2: ip_addr = ip_addr[0]
         return ip_addr
+    
+    def _sync_data(self):
+        # if self.rank==0:
+        #     freqs_gather = self.comm.gather(self.freqs, root=0)
+        #     for sublist in freqs_gather:
+        #         for f in sublist:
+        #             if f not in self.freqs:
+        #                 self._add_freq(f)
+        #     farfields_keys, farfields_vals = zip(*self.farfields.items())
+        #     farfields_keys_gather = self.comm.gather(farfields_keys, root=0)
+        #     farfields_vals_gather = self.comm.gather(farfields_vals, root=0)
+        #     for sublist in zip(farfields_keys_gather, farfields_vals_gather):
+        #         for k, v in sublist:
+        #             if f not in self.freqs:
+        #                 self._add_freq(f)
+        self._add_freq(self.freqs)
+        self._add_farfield(self.farfields)
+        return 0
     
     # def _transfer_dir_to_root(self, dirname: Path):
     #     if isinstance(dirname, Iterable):

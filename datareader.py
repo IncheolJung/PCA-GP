@@ -537,7 +537,7 @@ class OnFlySolver:
     def _add_freq(self, new_freq):
         if not isinstance(new_freq, Iterable): new_freq = [new_freq]
         if self.usempi:
-            print(f"[Rank: {self.rank}] calling _add_freq")
+            # print(f"[Rank: {self.rank}] calling _add_freq")
             freqs = self.comm.gather(new_freq, root=0)
             if self.rank == 0:
                 new_freq = [item for sublist in freqs for item in sublist]
@@ -548,7 +548,7 @@ class OnFlySolver:
     
     def _add_farfield(self, new_farfield):
         if self.usempi:
-            print(f"[Rank: {self.rank}] calling _add_farfield")
+            # print(f"[Rank: {self.rank}] calling _add_farfield")
             farfields_local_keys, farfields_local_vals = zip(*new_farfield.items())
             farfields_keys = self.comm.gather(farfields_local_keys, root=0)
             farfields_vals = self.comm.gather(farfields_local_vals, root=0)

@@ -99,14 +99,23 @@ def parse_args(default_values = None):
     return parser.parse_args()
 
 
+def is_comment(line: str):
+    line_clean: str = line.strip(' ').strip('\t')
+    return line_clean.startswith('#') or line_clean.startswith('//')
+
+
 def read_config(filename):
     config_values = [
-        line.strip('\n').split() 
+        line.strip('\n').split()    # remove redundant \n
         for line in open(filename, 'r').readlines() 
-        if not line.strip(' ').startswith('#') or line.strip(' ').startswith('//')
+        if not is_comment(line)     # only read non-comment
     ]
     config_values = [
-        line[0] if len(line)==1 else line 
+        line[0] if len(line)==1 else line   # parse multiple args
+        for line in config_values
+    ]
+    config_values = [
+        None if line=='None' else line  # parse None
         for line in config_values
     ]
     return config_values
@@ -117,7 +126,7 @@ def write_config(filename, config: dict):
         config_values = list(map(str, config.values()))
         config_keys = []
         for line in open(filename, 'r').readlines():
-            if line.strip(' ').startswith('#') or line.strip(' ').startswith('//'):
+            if is_comment(line):
                 config_keys.append(line.strip('\n'))
             else:
                 config_keys.append('\n')
@@ -202,18 +211,23 @@ def get_configuration():
         config = Namespace(**config)
     else:
         config = parse_args(config_defaults)
-    ### Write config to file ###
-    config_values = list(vars(config).values())
-    config_sim_values, config_gp_values = config_values[:num_config_sim], config_values[num_config_sim:]
-    for i, v in enumerate(config_sim_values):
-        try: config_sim_values[i] = ' '.join(list(v))
-        except (ValueError, TypeError): pass
-    assert(num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values))
-    config_sim_dict = {f"### {k} ###":v for k,v in zip(config_sim_key, config_sim_values)}
-    config_gp_dict = {f"### {k} ###":v for k,v in zip(config_gp_key, config_gp_values)}
-    write_config(config_sim_filename, config_sim_dict)
-    write_config(config_gp_filename, config_gp_dict)
-    return config
+    def parse_and_write_config(config):
+        ### Write config to file ###
+        config_values = list(vars(config).values())
+        config_sim_values, config_gp_values = config_values[:num_config_sim], config_values[num_config_sim:]
+        for i, v in enumerate(config_sim_values):
+            v_is_iterable = isinstance(v, (list, tuple, np.ndarray))
+            v_is_list_str = isinstance(v, str) and v.strip(' ').strip('\t').startswith('[')
+            if v_is_iterable or v_is_list_str:
+                config_sim_values[i] = ' '.join(list(v))
+        assert(num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values))
+        config_sim_dict = {f"### {k} ###":v for k,v in zip(config_sim_key, config_sim_values)}
+        config_gp_dict = {f"### {k} ###":v for k,v in zip(config_gp_key, config_gp_values)}
+        write_config(config_sim_filename, config_sim_dict)
+        write_config(config_gp_filename, config_gp_dict)
+        return 0
+    parse_and_write_config(config)
+    return config, parse_and_write_config
 
 
 def validate(*args):
@@ -342,10 +356,12 @@ def export(file_path, np_data, freqs, theta, phi):
 
 
 def main():
-    config = get_configuration()
+    config, parse_and_write_config = get_configuration()
+    print(config)
     # -----------------------
     # CONFIG
     # -----------------------
+            
     adaptive_basis = True
     acquisition_function = int(config.ac_fx)
     acquisition_function_candidate = [
@@ -416,6 +432,11 @@ def main():
         sweep_angle_type=sweep_type,
         usempi=usempi, mpicomm=comm
         )
+            
+    config.path = solver.workingpath
+    config.model = solver.model_name
+    parse_and_write_config(config)
+    raise Exception
 
     # solver = OnFlySolverMyMoM(
     #     workingpath="./data/MoM-data/spiral-theta90",

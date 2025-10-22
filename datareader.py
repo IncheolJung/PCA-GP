@@ -536,6 +536,7 @@ class OnFlySolver:
     
     def _add_freq(self, new_freq):
         if not isinstance(new_freq, Iterable): new_freq = [new_freq]
+        new_freq = [f for f in new_freq if f not in self.freqs]
         if self.usempi:
             # print(f"[Rank: {self.rank}] calling _add_freq")
             freqs = self.comm.gather(new_freq, root=0)
@@ -547,6 +548,7 @@ class OnFlySolver:
         return 0
     
     def _add_farfield(self, new_farfield):
+        new_farfield = {k:v for k,v in new_farfield.items() if k not in self.farfields.keys()}
         if self.usempi:
             # print(f"[Rank: {self.rank}] calling _add_farfield")
             if len(new_farfield):

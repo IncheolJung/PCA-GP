@@ -434,7 +434,7 @@ def main():
         )
             
     config.path = solver.workingpath
-    config.model = solver.model_name
+    # config.model = solver.model_name
     parse_and_write_config(config)
     # raise Exception
 

@@ -314,7 +314,9 @@ class OnFlySolver:
         # complete_freqs = Path(self.workingpath).glob("*")
         partial_dirs = list(Path(self.workingpath).glob("*[[]*[]]"))
         partial_dirs = [d.name for d in sorted(partial_dirs) if d.is_dir()]
-        partial_freqs = list(set([d[:d.index("_[")] for d in partial_dirs]))
+        partial_freqs = list(set(
+            [d[:d.index("_[")] for d in partial_dirs if not d.startswith('~tmp')]
+        ))
         for freq in partial_freqs:
             partials_running: list[str] = []
             partials_complete: list[str] = []
@@ -324,7 +326,7 @@ class OnFlySolver:
                         partials_running.append(d)
                     else:
                         partials_complete.append(d)
-            partials_for_this_freq = [d for d in partial_dirs if freq in d]
+            partials_for_this_freq = [*partials_running, partials_complete]
             start_list, end_list = [], []
             for p in partials_running:
                 start, end = map(int, p[p.find('[')+1:-1].split('_'))
@@ -349,15 +351,15 @@ class OnFlySolver:
                 head, tail = index_list[0]
                 if (head==0) and (tail==self.n_angles-1):
                     if all([(Path(self.workingpath)/d).exists() 
-                            for d in partials_for_this_freq]):
+                            for d in partials_complete]):
                         if partials_running: pass   # partials_running is vacant meaning all partials are complete
                         else:   # only merge if all partials are complete
-                            self._merge_efar_rcs(float(freq), partials_for_this_freq)
-                            for d in partials_for_this_freq:
+                            self._merge_efar_rcs(float(freq), partials_complete)
+                            for d in partials_complete:
                                 rm_r(Path(self.workingpath)/d)
                     else:
                         print(
-                            f"partials_for_this_freq {freq} no longer exists: "
+                            f"[Rank {self.rank}] partials_for_this_freq {freq} no longer exists: "
                             f"{partials_for_this_freq}"
                         )
                 else:

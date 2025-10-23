@@ -402,11 +402,12 @@ class OnFlySolver:
         dirs_str = ' '.join([str(d) for d in dirs])
 
         from subprocess import Popen
-        dest = f"{self.root_ip}:{self.workingpath}/tmp/"
+        dest = f"{self.root_ip}:{self.workingpath}/"
+        # dest = f"{self.root_ip}:{self.workingpath}/tmp/"
         # cmd = ' '.join(['rsync', '-az', dirs_str, dest])
         # print(f"[Rank {self.rank}] {cmd}")
-        Popen(['rsync', '-az', dirs_str, dest]).wait()
-        Popen(['rm', '-r', dirs_str]).wait()
+        Popen(['rsync', '-az', '--remove-source-files', dirs_str, dest]).wait()
+        # Popen(['rm', '-r', dirs_str]).wait()
         return 0
     
     def _get_hostname(self, rank: int = 0):

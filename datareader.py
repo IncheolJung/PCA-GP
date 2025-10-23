@@ -382,11 +382,13 @@ class OnFlySolver:
         return 0
     
     def _unpack_delivery(self):
-        if Path(f'{self.workingpath}/tmp').exists():
+        tmp = Path(f'{self.workingpath}/tmp')
+        if tmp.exists():
             print('[Rank 0] Unpacking delivered simulations')
-            dirs_to_move = list(Path(f'{self.workingpath}/tmp').glob('*'))
+            dirs_to_move = list(tmp.glob('*'))
             for d in dirs_to_move:
                 d.rename(f'{self.workingpath}/{d.name}')
+            tmp.rmdir()
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
@@ -493,10 +495,11 @@ class OnFlySolver:
                     raise RuntimeError(
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
-            self._clean_simulations(delay=0.5*self.rank)
+            self._clean_simulations()
             self.comm.barrier()
             if self.rank == 0:
                 self._unpack_delivery()
+                self._clean_simulations()
                 return np.array([self.__call__openmp(f, angle) for f in freq])
             else:
                 return None

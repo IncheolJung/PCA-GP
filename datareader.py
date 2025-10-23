@@ -364,7 +364,8 @@ class OnFlySolver:
                     print(f"[Rank {self.rank}] Partial simulation found at {freq}.")
                     print(f"[Rank {self.rank}] Attempting to gather simulations to root...")
                     partials_for_this_freq = [Path(self.workingpath)/d 
-                                              for d in partials_for_this_freq]
+                                              for d in partials_for_this_freq
+                                              if (Path(self.workingpath)/d).exists()]
                     self._transfer_dir_to_root(partials_for_this_freq)
             else:
                 print(

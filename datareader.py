@@ -14,9 +14,11 @@ def rm_r(path: Path):
     if path.is_dir():
         for child in path.iterdir():
             rm_r(child)  # recurse into children
-        path.rmdir()      # remove the now-empty directory
+        try: path.rmdir()      # remove the now-empty directory
+        except FileNotFoundError: pass
     else:
-        path.unlink()     # remove file or symlink
+        try: path.unlink()     # remove file or symlink
+        except FileNotFoundError: pass
 
 
 
@@ -500,7 +502,6 @@ class OnFlySolver:
                     raise RuntimeError(
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
-            self.comm.Barrier()
             self._clean_simulations(delay=0.5*self.rank)
             self.comm.Barrier()
             if self.rank == 0:

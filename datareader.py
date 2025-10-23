@@ -500,8 +500,9 @@ class OnFlySolver:
                     raise RuntimeError(
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
-            self.comm.barrier()
+            self.comm.Barrier()
             self._clean_simulations(delay=0.5*self.rank)
+            self.comm.Barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 self._clean_simulations()

@@ -277,8 +277,8 @@ class OnFlySolver:
             for i, f in enumerate(freq):
                 for j, angle_chunk in enumerate(angle_chunks_per_freq[i]):
                     mod += j
-                    chunks[i+mod][0].append(f)
-                    chunks[i+mod][1].append(angle_chunk)
+                    chunks[(i+mod)%self.size][0].append(f)
+                    chunks[(i+mod)%self.size][1].append(angle_chunk)
             # chunks = [([f], angle) for f in freq]
             # chunks.extend([(None, None) for _ in range(self.size - n_freq)])
         else:   # n_freq >= self.size   # Only chunk based on freq
@@ -384,9 +384,9 @@ class OnFlySolver:
     def _unpack_delivery(self):
         if Path(f'{self.workingpath}/tmp').exists():
             print('[Rank 0] Unpacking delivered simulations')
-            from subprocess import Popen
-            Popen(['mv', f'{self.workingpath}/tmp/*', f'{self.workingpath}/']).wait()
-            # Popen(['rm', '-r', f'{self.workingpath}/tmp/']).wait()
+            dirs_to_move = list(Path(f'{self.workingpath}/tmp').glob('*'))
+            for d in dirs_to_move:
+                d.rename(f'{self.workingpath}/{d.name}')
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
@@ -729,15 +729,16 @@ class OnFlySolver:
         return 0
     
     def run(self, freq_query, angle_query = None):
-        if self.usempi:
-            print(f"[Rank {self.rank}] running simulation at {freq_query}...")
         from subprocess import Popen, STDOUT, PIPE
         if freq_query is None: return 0     # pass
         if angle_query is None:
             angle_query = self.angles
         elif not isinstance(angle_query, Iterable):
             angle_query = [angle_query]
-        print(f"\n ======  Adding Frequency Sample: {freq_query}  ====== \n")
+        if self.usempi:
+            print(f"[Rank {self.rank}] running simulation at {freq_query}...")
+        else:
+            print(f"\n ======  Adding Frequency Sample: {freq_query}  ====== \n")
         freq_query = self.encoder(freq_query)
         org_path = os.getcwd()
         os.chdir(self.workingpath)

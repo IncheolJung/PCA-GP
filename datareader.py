@@ -361,7 +361,10 @@ class OnFlySolver:
                             f"{partials_for_this_freq}"
                         )
                 else:
-                    print(f"[Rank {self.rank}] Partial simulation found at {freq}.")
+                    print(
+                        f"[Rank {self.rank}] Partial simulation found at "
+                        f"{freq} with index [{head, tail}]"
+                    )
                     print(f"[Rank {self.rank}] Attempting to gather simulations to root...")
                     partials_for_this_freq = [Path(self.workingpath)/d 
                                               for d in partials_for_this_freq
@@ -376,6 +379,11 @@ class OnFlySolver:
 
         return 0
     
+    def _unpack_delivery(self):
+        from subprocess import Popen
+        Popen(['mv', f'{self.workingpath}/tmp/*', f'{self.workingpath}/']).wait()
+        return 0
+    
     def _transfer_dir_to_root(self, dirname: Path):
         # Normalize input to list of Path objects
         if isinstance(dirname, (str, Path)):
@@ -387,19 +395,19 @@ class OnFlySolver:
         dirs_str = ' '.join([str(d) for d in dirs])
 
         from subprocess import Popen
-        dest = f"{self.root_ip}:{self.workingpath}"
+        dest = f"{self.root_ip}:{self.workingpath}/tmp/"
         # cmd = ' '.join(['rsync', '-az', dirs_str, dest])
         # print(f"[Rank {self.rank}] {cmd}")
-        prog = Popen(['rsync', '-az', dirs_str, dest])
-        prog.wait()
-        prog = Popen(['rm', '-r', dirs_str])
-        prog.wait()
+        Popen(['rsync', '-az', dirs_str, dest]).wait()
+        Popen(['rm', '-r', dirs_str]).wait()
         return 0
     
     def _get_hostname(self, rank: int = 0):
         with open('hosts.txt', 'r') as f:
             ip_addr = f.readlines()[rank].split()
-            if len(ip_addr)==2: ip_addr = ip_addr[0]
+            if len(ip_addr)==1: pass
+            elif len(ip_addr)>1: ip_addr = ip_addr[0]
+            else: raise RuntimeError('Invalid hosts.txt')
         return ip_addr
     
     def _sync_data(self):
@@ -483,6 +491,7 @@ class OnFlySolver:
             self._clean_simulations(delay=0.5*self.rank)
             self.comm.Barrier()
             if self.rank == 0:
+                self._unpack_delivery()
                 return np.array([self.__call__openmp(f, angle) for f in freq])
             else:
                 return None

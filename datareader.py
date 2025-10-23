@@ -157,7 +157,9 @@ class OnFlySolver:
             freqs = []
             for d in Path(workingpath).glob("*/"):
                 if d.is_dir():
-                    try: freqs.append(float(d.name))
+                    try: 
+                        newfreq = float(d.name)
+                        freqs.append(newfreq)
                     except ValueError: rm_r(d)
             return freqs
         

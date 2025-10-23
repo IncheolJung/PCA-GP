@@ -489,7 +489,7 @@ class OnFlySolver:
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
             self._clean_simulations(delay=0.5*self.rank)
-            self.comm.Barrier()
+            self.comm.barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 return np.array([self.__call__openmp(f, angle) for f in freq])

@@ -367,7 +367,7 @@ class OnFlySolver:
                     )
                     print(f"[Rank {self.rank}] Attempting to gather simulations to root...")
                     partials_for_this_freq = [Path(self.workingpath)/d 
-                                              for d in partials_for_this_freq
+                                              for d in partials_complete
                                               if (Path(self.workingpath)/d).exists()]
                     self._transfer_dir_to_root(partials_for_this_freq)
             else:
@@ -489,7 +489,7 @@ class OnFlySolver:
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
             self._clean_simulations(delay=0.5*self.rank)
-            self.comm.barrier()
+            self.comm.Barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 return np.array([self.__call__openmp(f, angle) for f in freq])

@@ -313,14 +313,24 @@ class OnFlySolver:
         time.sleep(delay)
         # complete_freqs = Path(self.workingpath).glob("*")
         partial_dirs = list(Path(self.workingpath).glob("*[[]*[]]"))
-        partial_dirs = [d.name for d in sorted(partial_dirs) 
-                            if d.is_dir() and not '~tmp' in d.name]
+        partial_dirs = [d.name for d in sorted(partial_dirs) if d.is_dir()]
         partial_freqs = list(set([d[:d.index("_[")] for d in partial_dirs]))
         for freq in partial_freqs:
+            partials_running: list[str] = []
+            partials_complete: list[str] = []
+            for d in partial_dirs:
+                if freq in d:
+                    if d.startswith('~tmp'):
+                        partials_running.append(d)
+                    else:
+                        partials_complete.append(d)
             partials_for_this_freq = [d for d in partial_dirs if freq in d]
             start_list, end_list = [], []
-            for p in partials_for_this_freq:
-                # suppose dirname is "frequency_[i1_i2]"
+            for p in partials_running:
+                start, end = map(int, p[p.find('[')+1:-1].split('_'))
+                start_list.append(start)
+                end_list.append(end)
+            for p in partials_complete:
                 start, end = map(int, p[len(freq)+2:-1].split('_'))
                 start_list.append(start)
                 end_list.append(end)
@@ -340,22 +350,19 @@ class OnFlySolver:
                 if (head==0) and (tail==self.n_angles-1):
                     if all([(Path(self.workingpath)/d).exists() 
                             for d in partials_for_this_freq]):
-                        self._merge_efar_rcs(float(freq), partials_for_this_freq)
-                        for d in partials_for_this_freq:
-                            rm_r(Path(self.workingpath)/d)
+                        if partials_running: pass   # partials_running is vacant meaning all partials are complete
+                        else:   # only merge if all partials are complete
+                            self._merge_efar_rcs(float(freq), partials_for_this_freq)
+                            for d in partials_for_this_freq:
+                                rm_r(Path(self.workingpath)/d)
                     else:
                         print(
                             f"partials_for_this_freq {freq} no longer exists: "
                             f"{partials_for_this_freq}"
                         )
                 else:
-                    print(
-                        f"[Rank {self.rank}] "
-                        f"Broken simulation at {freq}. "
-                        f"Stored index are {index_list} "
-                        f"while [0, {self.n_angles-1}] is required"
-                    )
-                    print(f"[Rank {self.rank}]", "Attempting to gather simulations to root...")
+                    print(f"[Rank {self.rank}] Partial simulation found at {freq}.")
+                    print(f"[Rank {self.rank}] Attempting to gather simulations to root...")
                     partials_for_this_freq = [Path(self.workingpath)/d 
                                               for d in partials_for_this_freq]
                     self._transfer_dir_to_root(partials_for_this_freq)

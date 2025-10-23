@@ -496,7 +496,7 @@ class OnFlySolver:
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
             self._clean_simulations()
-            self.comm.barrier()
+            self.comm.Barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 self._clean_simulations()

@@ -375,22 +375,13 @@ class OnFlySolver:
                                               if (Path(self.workingpath)/d).exists()]
                     self._transfer_dir_to_root(partials_for_this_freq)
             else:
-                print(
-                    f"Broken simulation at {freq}. "
-                    f"Stored index are {index_list} "
-                    f"while [0, {self.n_angles-1}] is required"
-                )
+                if self.rank==0:    # _clean_simulations always called under usempi=True
+                    print(
+                        f"Broken simulation at {freq}. "
+                        f"Stored index are {index_list} "
+                        f"while [0, {self.n_angles-1}] is required"
+                    )
 
-        return 0
-    
-    def _unpack_delivery(self):
-        tmp = Path(f'{self.workingpath}/tmp')
-        if tmp.exists():
-            print('[Rank 0] Unpacking delivered simulations')
-            dirs_to_move = list(tmp.glob('*'))
-            for d in dirs_to_move:
-                d.rename(f'{self.workingpath}/{d.name}')
-            tmp.rmdir()
         return 0
     
     def _transfer_dir_to_root(self, dirname: Path):
@@ -399,6 +390,8 @@ class OnFlySolver:
             dirs = [Path(dirname)]
         else:
             dirs = [Path(d) for d in dirname]
+        
+        if not dirs: return 0   # empty dirname called
 
         # Convert to strings
         dirs_str = ' '.join([str(d) for d in dirs])
@@ -409,6 +402,16 @@ class OnFlySolver:
         # print(f"[Rank {self.rank}] {cmd}")
         Popen(['rsync', '-az', dirs_str, dest]).wait()
         Popen(['rm', '-r', dirs_str]).wait()
+        return 0
+    
+    def _unpack_delivery(self):
+        tmp = Path(f'{self.workingpath}/tmp')
+        if tmp.exists():
+            print('[Rank 0] Unpacking delivered simulations')
+            dirs_to_move = list(tmp.glob('*'))
+            for d in dirs_to_move:
+                d.rename(f'{self.workingpath}/{d.name}')
+            tmp.rmdir()
         return 0
     
     def _get_hostname(self, rank: int = 0):

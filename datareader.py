@@ -380,6 +380,7 @@ class OnFlySolver:
         return 0
     
     def _unpack_delivery(self):
+        print('[Rank 0] Unpacking delivered simulations')
         from subprocess import Popen
         Popen(['mv', f'{self.workingpath}/tmp/*', f'{self.workingpath}/']).wait()
         return 0

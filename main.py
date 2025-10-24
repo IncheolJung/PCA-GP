@@ -237,8 +237,8 @@ def validate(*args):
 
     truth = solver(f_test, rbgp.angles)
 
-    # if usempi:
-    #     comm.Barrier()
+    if usempi:
+        comm.Barrier()
     
     if (not usempi) or (usempi and rank==0):
         # truth = np.array([solver(f, a) for f, a in product(f_test, rbgp.angles)])  # (n_init, n_angles)

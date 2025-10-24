@@ -7,13 +7,13 @@ from linear_operator.utils.errors import NotPSDError, NanError
 from numpy.random import uniform
 import sys
 
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # try:
 #     import os
 #     rank = int(os.environ.get('OMPI_COMM_WORLD_RANK', 0))
 #     torch.cuda.set_device(rank % torch.cuda.device_count())
 # except ValueError as e: print(e)
-device = 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cpu'
     
 
 def set_ynormalizer(train_y, normalize_y: bool):

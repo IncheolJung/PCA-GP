@@ -1,18 +1,18 @@
 Command exited with non-zero status 1
 	Command being timed: "bash run_mpi.sh run_node.sh"
-	User time (seconds): 0.02
-	System time (seconds): 0.19
-	Percent of CPU this job got: 0%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 15:54.03
+	User time (seconds): 0.01
+	System time (seconds): 0.17
+	Percent of CPU this job got: 6%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:03.08
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 32544
+	Maximum resident set size (kbytes): 32712
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 7
-	Minor (reclaiming a frame) page faults: 5419
-	Voluntary context switches: 2334
+	Minor (reclaiming a frame) page faults: 5416
+	Voluntary context switches: 221
 	Involuntary context switches: 39
 	Swaps: 0
 	File system inputs: 0

@@ -197,6 +197,7 @@ class ReducedBasisGPBASE:
         """Pick frequency that maximizes integrated variance across coefficients"""
         if (not self.usempi) or (self.usempi and self.rank==0):
 
+            # n_grid = max(n_grid, len(self.freqs)+n_new_samples)
             total_mu, total_var, f_domain, POD_energy = self._pred_gps(f_min, f_max, n_grid)
             # print(np.array(preds))
             

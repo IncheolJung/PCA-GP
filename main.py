@@ -69,8 +69,9 @@ def parse_args(default_values = None):
         help=f"[start, end, number] of the frequency sweep")
     parser.add_argument(
         "-v", "--validate", 
-        action=f"store_{str(not bool(default_values[5])).lower()}", 
+        action=f"store_true", 
         help=f"flag for validation")
+    parser.set_defaults(validate=bool(default_values[5]))
     parser.add_argument(
         "-a", "--ac-fx", "--acquisition-function", dest="ac_fx", 
         default=default_values[6], 

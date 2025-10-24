@@ -358,9 +358,15 @@ class OnFlySolver:
                             for d in partials_complete]):
                         if partials_running: pass   # partials_running is vacant meaning all partials are complete
                         else:   # only merge if all partials are complete
-                            self._merge_efar_rcs(float(freq), partials_complete)
-                            for d in partials_complete:
-                                rm_r(Path(self.workingpath)/d)
+                            try:
+                                self._merge_efar_rcs(float(freq), partials_complete)
+                                for d in partials_complete:
+                                    rm_r(Path(self.workingpath)/d)
+                            except FileNotFoundError:
+                                print(
+                                    f"[Rank {self.rank}] Tried to merge simulations "
+                                    "but seems to be done by another node."
+                                    )
                     else:
                         print(
                             f"[Rank {self.rank}] partials_for_this_freq {freq} no longer exists: "
@@ -422,19 +428,7 @@ class OnFlySolver:
         return ip_addr
     
     def _sync_data(self):
-        # if self.rank==0:
-        #     freqs_gather = self.comm.gather(self.freqs, root=0)
-        #     for sublist in freqs_gather:
-        #         for f in sublist:
-        #             if f not in self.freqs:
-        #                 self._add_freq(f)
-        #     farfields_keys, farfields_vals = zip(*self.farfields.items())
-        #     farfields_keys_gather = self.comm.gather(farfields_keys, root=0)
-        #     farfields_vals_gather = self.comm.gather(farfields_vals, root=0)
-        #     for sublist in zip(farfields_keys_gather, farfields_vals_gather):
-        #         for k, v in sublist:
-        #             if f not in self.freqs:
-        #                 self._add_freq(f)
+        print(f"[Rank: {self.rank}] calling _sync_data")
         self._add_freq(self.freqs)
         self._add_farfield(self.farfields)
         return 0
@@ -468,7 +462,7 @@ class OnFlySolver:
         # Parallel(n_jobs=4)(  # use $(nproc) / 4 cores
         #             delayed(_run_one)(f) for f in range(freq_to_run)
         #         )
-
+        
         if isinstance(freq, Iterable):
             # return np.array([self.__call__(f, angle) for f in freq])
             # Step 1: Only rank 0 checks which frequencies exist
@@ -501,9 +495,13 @@ class OnFlySolver:
                     )
             self._clean_simulations()
             self.comm.Barrier()
+            self._sync_data()
+            self.comm.Barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 self._clean_simulations()
+                # print(f"[Rank {self.rank}] farfields: ", list(self.farfields.keys()))
+                # print(f"[Rank {self.rank}] freqs: ", self.freqs)
                 return np.array([self.__call__openmp(f, angle) for f in freq])
             else:
                 return None
@@ -565,19 +563,19 @@ class OnFlySolver:
     
     def _add_freq(self, new_freq):
         if not isinstance(new_freq, Iterable): new_freq = [new_freq]
-        new_freq = [f for f in new_freq if f not in self.freqs]
+        # new_freq = [f for f in new_freq if f not in self.freqs]
         if self.usempi:
             # print(f"[Rank: {self.rank}] calling _add_freq")
             freqs = self.comm.gather(new_freq, root=0)
             if self.rank == 0:
-                new_freq = [item for sublist in freqs for item in sublist]
+                new_freq = [f for sublist in freqs for f in sublist
+                            if f not in self.freqs] 
                 self.freqs.extend(new_freq)
         else:
             self.freqs.extend(new_freq)
         return 0
     
     def _add_farfield(self, new_farfield):
-        new_farfield = {k:v for k,v in new_farfield.items() if k not in self.farfields.keys()}
         if self.usempi:
             # print(f"[Rank: {self.rank}] calling _add_farfield")
             if len(new_farfield):
@@ -731,8 +729,10 @@ class OnFlySolver:
             else: raise RuntimeError(f"Invalid sweep_angle_type: {self.sweep_angle_type}")
             farfields_new[(freq, angle)] = (cpol_re+1j*cpol_im, xpol_re+1j*xpol_im)
         freqs_new.append(freq)
-        self._add_freq(freqs_new)
-        self._add_farfield(farfields_new)
+        # self._add_freq(freqs_new)
+        # self._add_farfield(farfields_new)
+        self.freqs.extend(freqs_new)
+        self.farfields.update(farfields_new)
         return 0
     
     def run(self, freq_query, angle_query = None):

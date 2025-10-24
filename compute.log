@@ -4,8 +4,35 @@ USING MPI: mpi4py backend
 [Rank 0] frequency parsed from directories
 [Rank: 0] calling _sync_data
 [Rank 1] starting work...
-[Rank 0] finished data loading
 [Rank 1] frequency parsed from directories
+[Rank: 1] calling _sync_data
 [Rank 1] finished data loading
+[Rank 0] finished data loading
 [Rank: 0] calling _sync_data
+[Rank: 1] calling _sync_data
+[Rank 0] Solver initialized
 [Rank 1] Solver initialized
+
+ ======  Simulation 109 Initialized  ====== 
+
+  >> Simulation path: ./data/VWT-data/sphere
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> Sampling strategy: latin-hyper-cube
+  >> n_init: 4
+  >> terms: 3
+  >> max_iter: 100
+  >> tol: 0.001
+  >> angles theta: [start, end, number] = (0.0, 180.0, 181)
+
+ ======  Simulation 109 Initialized  ====== 
+
+[Rank 0] attempting to simulate on...
+    614.509 MHz, [0.0, 180.0] DEG
+    1247.813 MHz, [0.0, 180.0] DEG
+[Rank 0] running simulation at 614.509...
+[Rank 1] attempting to simulate on...
+    891.414 MHz, [0.0, 180.0] DEG
+    1303.014 MHz, [0.0, 180.0] DEG
+[Rank 1] running simulation at 891.414...

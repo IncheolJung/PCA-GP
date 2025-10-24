@@ -428,7 +428,7 @@ class OnFlySolver:
         return ip_addr
     
     def _sync_data(self):
-        print(f"[Rank: {self.rank}] calling _sync_data")
+        # print(f"[Rank: {self.rank}] calling _sync_data")
         self._add_freq(self.freqs)
         self._add_farfield(self.farfields)
         return 0
@@ -494,9 +494,9 @@ class OnFlySolver:
                         f"simulation error exit {exit_code} at rank {self.rank}"
                     )
             self._clean_simulations()
-            self.comm.Barrier()
+            # self.comm.Barrier()
             self._sync_data()
-            self.comm.Barrier()
+            # self.comm.Barrier()
             if self.rank == 0:
                 self._unpack_delivery()
                 self._clean_simulations()

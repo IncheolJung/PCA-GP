@@ -385,9 +385,14 @@ def main():
     terms  = int(config.t)
     max_iter = int(config.i)
     tol = float(config.tol)
-    f_min, f_max, f_num = *map(float, config.freq[:2]), int(config.freq[2])
-    a_min, a_max, a_num = *map(float, config.angle[:2]), int(config.angle[2])
-    angles = np.linspace(a_min, a_max, a_num)  # 181 angles
+    f_min, f_max, f_step = map(float, config.freq)
+    a_min, a_max, a_step = map(float, config.angle)
+    angles = np.arange(a_min, a_max+a_step, a_step)
+    freqs = np.arange(f_min, f_max+f_step, f_step)
+    f_num = len(freqs)
+    # f_min, f_max, f_num = *map(float, config.freq[:2]), int(config.freq[2])
+    # a_min, a_max, a_num = *map(float, config.angle[:2]), int(config.angle[2])
+    # angles = np.linspace(a_min, a_max, a_num)
 
     # -----------------------
     # SOLVER
@@ -479,7 +484,7 @@ def main():
         print(f"  >> terms: {terms}")
         print(f"  >> max_iter: {max_iter}")
         print(f"  >> tol: {tol}")
-        print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, number] = {a_min, a_max, a_num}")
+        print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, step] = {a_min, a_max, a_step}")
         print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
         stdout.flush()
     # -----------------------
@@ -534,7 +539,7 @@ def main():
         print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
         stdout.flush()
 
-        f_export = np.linspace(f_min, f_max, f_num)
+        f_export = freqs
         # export("freq_sweep.efar", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
         export("EFAR/", rbgp.reconstruct(f_export), f_export, solver.theta, solver.phi)
         # export("CURRENT/", rbgp.reconstruct(f_export), f_export, solver.nodes)
@@ -543,7 +548,7 @@ def main():
     
         if (not usempi) or (usempi and rank==0):
             # f_test = np.linspace(f_min, f_max, 101)
-            f_test = np.linspace(f_min, f_max, f_num).tolist()
+            f_test = freqs.tolist()
         else:
             f_test = None
             stdout = None

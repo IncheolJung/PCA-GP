@@ -215,11 +215,11 @@ class ReducedBasisGPBASE:
             peaks, properties = find_peaks(ac_vals, prominence=1e-8)  # adjust prominence if needed
 
             # If fewer peaks than requested, fallback to global top-n values
-            if len(peaks) < n_new_samples:
+            if len(peaks) < n_new_samples:  # global top-n values
                 sorted_idx = np.argsort(ac_vals)[::-1]
                 mask = ~np.isin(f_domain[sorted_idx, 0], self.freqs)
                 chosen_idx = sorted_idx[mask][:n_new_samples]
-            else:
+            else:  # top-n peaks
                 # Sort peaks by prominence (descending)
                 prom_sorted_idx = np.argsort(properties["prominences"])[::-1]
                 top_peaks = peaks[prom_sorted_idx][:n_new_samples]

@@ -237,6 +237,7 @@ class OnFlySolver:
                 exit_code = self.run(freq, angle)
                 if exit_code != 0:
                     raise RuntimeError(f"simulation error exit {exit_code}")
+                self._clean_simulations()
         if isinstance(angle, Iterable):
             return np.array([self.__call__openmp(freq, a) for a in angle])
             # return Parallel(n_jobs=4, backend="loky")(
@@ -711,12 +712,11 @@ class OnFlySolver:
         if len(farfield_data) != len(angle): 
             farfield_data_from_file = ''.join(Path(farfield_file).open('r').readlines())
             raise RuntimeError(
-                "data unmatched with queried angle:", 
-                f"datasize {len(farfield_data)} != request {len(self.phi)}", 
-                f"at frequency {freq}", 
-                f"farfield_file: {Path(farfield_file).absolute().__str__()}", 
-                f"{farfield_data_from_file}", 
-                sep='\n'
+                "data unmatched with queried angle:\n" 
+                f"datasize {len(farfield_data)} != request {len(self.phi)}\n" 
+                f"at frequency {freq}\n" 
+                f"farfield_file: {Path(farfield_file).absolute().__str__()}\n" 
+                f"{farfield_data_from_file}\n" 
             )
         farfields_new = {}
         freqs_new = []

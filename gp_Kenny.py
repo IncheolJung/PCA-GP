@@ -12,8 +12,8 @@ import sys
 #     rank = int(os.environ.get('OMPI_COMM_WORLD_RANK', 0))
 #     torch.cuda.set_device(rank % torch.cuda.device_count())
 # except ValueError as e: print(e)
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cpu'
     
 
 def set_ynormalizer(train_y, normalize_y: bool):

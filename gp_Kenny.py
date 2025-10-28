@@ -107,7 +107,7 @@ class GPModel(gpytorch.models.ExactGP):
             x_batch = x[i:i + batch_size]
             with torch.no_grad(), gpytorch.settings.max_preconditioner_size(10), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
                 warnings.simplefilter("ignore", GPInputWarning)
-                pred = self.likelihood(model(x_batch))
+                pred = self.likelihood(self.__call__(x_batch))
             preds.append(pred)
         observed_pred = torch.cat([p.mean for p in preds])
         ypred = self.y_denormalizer(observed_pred.mean)

@@ -6,6 +6,7 @@ from torch.nn.utils import clip_grad_norm_
 from linear_operator.utils.errors import NotPSDError, NanError
 from numpy.random import uniform
 import sys
+import gc
 
 # try:
 #     import os
@@ -87,18 +88,28 @@ class GPModel(gpytorch.models.ExactGP):
         # print("Output shape:", mean_x.shape, covar_x.shape)
         return self.distribute(mean_x, covar_x)
 
-    def predict(self, x, return_std=False):
+    def predict(self, x, return_std=False, batch_size=256):
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Input shape:", x.shape)
         if x.ndim == 1: x = x[:, None]
         x = torch.from_numpy(x).double().to(device)
+        gc.collect()
+        torch.cuda.empty_cache()
         self.eval()
         self.likelihood.eval()
-        with torch.no_grad(), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
-            # The forward pass will handle reshaping the prediction data
-            warnings.simplefilter("ignore", GPInputWarning)
-            observed_pred = self.likelihood(self.__call__(x))
-            # observed_pred = self.__call__(x)
+        # with torch.no_grad(), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
+        #     # The forward pass will handle reshaping the prediction data
+        #     warnings.simplefilter("ignore", GPInputWarning)
+        #     observed_pred = self.likelihood(self.__call__(x))
+        #     # observed_pred = self.__call__(x)
+        preds = []
+        for i in range(0, x.size(0), batch_size):
+            x_batch = x[i:i + batch_size]
+            with torch.no_grad(), gpytorch.settings.max_preconditioner_size(10), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
+                warnings.simplefilter("ignore", GPInputWarning)
+                pred = self.likelihood(model(x_batch))
+            preds.append(pred)
+        observed_pred = torch.cat([p.mean for p in preds])
         ypred = self.y_denormalizer(observed_pred.mean)
         prediction = [ypred.detach().cpu().numpy()]
         if return_std:

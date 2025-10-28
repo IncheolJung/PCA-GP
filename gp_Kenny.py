@@ -102,6 +102,11 @@ class GPModel(gpytorch.models.ExactGP):
         #     warnings.simplefilter("ignore", GPInputWarning)
         #     observed_pred = self.likelihood(self.__call__(x))
         #     # observed_pred = self.__call__(x)
+        # ypred = self.y_denormalizer(observed_pred.mean)
+        # prediction = [ypred.detach().cpu().numpy()]
+        # if return_std:
+        #     ystd = self.y_denorm_std(observed_pred.variance.sqrt())
+        #     prediction.append(ystd.detach().cpu().numpy())
         preds = []
         for i in range(0, x.size(0), batch_size):
             x_batch = x[i:i + batch_size]
@@ -109,11 +114,10 @@ class GPModel(gpytorch.models.ExactGP):
                 warnings.simplefilter("ignore", GPInputWarning)
                 pred = self.likelihood(self.__call__(x_batch))
             preds.append(pred)
-        observed_pred = torch.cat([p.mean for p in preds])
-        ypred = self.y_denormalizer(observed_pred.mean)
+        ypred = torch.cat([self.y_denormalizer(p.mean) for p in preds])
         prediction = [ypred.detach().cpu().numpy()]
         if return_std:
-            ystd = self.y_denorm_std(observed_pred.variance.sqrt())
+            ystd = torch.cat([self.y_denorm_std(p.variance.sqrt()) for p in preds])
             prediction.append(ystd.detach().cpu().numpy())
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Output shape:", ypred.shape)

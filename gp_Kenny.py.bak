@@ -385,7 +385,7 @@ def train_model_per_batch(
                 y_denormalizer, y_denorm_std, _y_train_std, 
                 training_iter, verbose
             )
-        except (NotPSDError, NanError):
+        except (NotPSDError, NanError, torch._C._LinAlgError):
             model, loss = None, float("inf")
         if loss < best_loss:
             best_loss = loss

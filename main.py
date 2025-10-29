@@ -46,7 +46,7 @@ def parse_args(default_values = None):
         ]
     if default_values is None:
         default_values = [
-            None, None, ['0', '180', '181'], '0', ["9500", "10500", "101"], 'false', 
+            None, None, ['0', '180', '1'], '0', ["1000", "2000", "1"], 'false', 
             '0', '1', '3', '1', '3', '0', '20', '1e-3'
         ]
     parser = ArgumentParser()
@@ -162,8 +162,8 @@ def get_configuration():
                 raise FileNotFoundError
         except FileNotFoundError:
             config_sim_from_file = [
-                None, None, ['0', '180', '181'], '0', 
-                ["9500", "10500", "101"], 'false'
+                None, None, ['0', '180', '1'], '0', 
+                ["1000", "2000", "1"], 'false'
             ]
         try:
             config_gp_from_file = read_config(config_gp_filename)

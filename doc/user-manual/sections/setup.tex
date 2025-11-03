@@ -129,3 +129,5 @@ where \texttt{hosts.txt} contains
 192.168.x.y1 slots=2
 192.168.x.y2 slots=2
 \end{lstlisting}
+
+In \texttt{P-GP-ID}, when a distributed filesystem is used, it is REQURIED to use \texttt{hosts.txt} file. This attributes to the very nature of the distributed filesystem and the task-chunking approach \texttt{P-GP-ID} use depected in Fig.~\ref{FIG:workflow} (b). Since each task-chunk does not fully cover all queries for the frequency, its output becomes a partial data for the frequency. In distributed filesystem, these partial data are distributed across computing nodes. To merge these fractions, \texttt{P-GP-ID} uses \texttt{rsync} to gather all the partial data directories into the \texttt{root} node which integrates them into complete data per frequency. Therefore, each node needs to know the the ip address of the root node, which is the destination of the file transmission. To enable this, \texttt{P-GP-ID} attempts to access \texttt{hosts.txt} file, assuming that the first line contains the ip address of the root node. If not exist, \texttt{P-GP-ID} will assume that the user is using a shared filesystem thus will not transfer files between computing nodes.

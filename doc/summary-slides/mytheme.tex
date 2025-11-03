@@ -1,0 +1,71 @@
+% BASE THEME
+\usetheme{Madrid}
+\usecolortheme{orchid}
+\usefonttheme{professionalfonts}
+
+% COLOR
+\definecolor{myTeal}{RGB}{20,50,110}
+\definecolor{myOrange}{RGB}{230,90,20}
+\definecolor{myBlue}{RGB}{0,30,200}
+\definecolor{myGreen}{RGB}{0,130,0}
+
+\setbeamercolor{palette primary}    {fg=white, bg=myTeal}
+% \setbeamercolor{palette secondary}  {fg=white, bg=myTeal!75!black}
+\setbeamercolor{palette tertiary}   {fg=white, bg=myTeal!75!black}
+% \setbeamercolor{palette quaternary} {fg=white, bg=myTeal!50!black}
+\setbeamercolor{item}           {fg=myOrange!85!black}
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{enumerate subitems}[default]
+\setbeamertemplate{enumerate subsubitems}[default]
+\setbeamercolor{enumerate item}       {fg=myOrange!70!black}   % 1., 2., 3., …
+\setbeamercolor{enumerate subitem}    {fg=myOrange!70!black}   % a., b., c., …
+\setbeamercolor{enumerate subsubitem} {fg=myOrange!70!black}   % i., ii., iii., …
+\setbeamercolor{caption name}   {fg=myOrange!90!black}
+% \setbeamercolor{structure}{fg=myTeal, bg=myOrange}
+% \setbeamercolor{frametitle}{bg=myTeal}
+
+% BOTTOMLINE
+\setbeamertemplate{footline}{
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.49\paperwidth,ht=2.5ex,dp=1ex,leftskip=1em]{author in head/foot}%
+      \usebeamerfont{title in head/foot}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.02\paperwidth,ht=2.5ex,dp=1ex,center]{author in head/foot}%
+      \usebeamerfont{page number in head/foot}\hfill\insertframenumber
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.49\paperwidth,ht=2.5ex,dp=1ex,rightskip=1em]{author in head/foot}%
+      \usebeamerfont{author in head/foot}\hfill\insertshortauthor
+    \end{beamercolorbox}%
+  }%
+  \vskip0pt%
+}
+
+% DISABLE SLIDE NAVIGATION TOOLBAR
+\setbeamertemplate{navigation symbols}{}
+
+% HREF FORMAT
+% \usepackage[normalem]{ulem}
+\usepackage{soul}
+\setul{0.3ex}{0.1ex}
+\let\Oldhref\href
+\renewcommand{\href}[2]{%
+  \Oldhref{#1}{\textcolor{myBlue}{\ul{#2}}}%
+}
+
+% CODE FORMAT
+\usepackage{listings}
+\lstset{
+  showstringspaces=false,
+  breaklines=true,
+  % lineskip=-0.3ex
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{myBlue},
+  commentstyle=\color{myGreen},
+  stringstyle=\color{myOrange},
+  frame=single
+  % backgroundcolor=\color{black!60},
+}
+
+% BASIC PACKS
+\usepackage{amsmath}

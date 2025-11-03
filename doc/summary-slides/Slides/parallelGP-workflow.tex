@@ -1,0 +1,66 @@
+\begin{frame} {Parallel GPR: workflow}
+
+  \begin{columns}
+
+    \column{0.60\linewidth}
+    \begin{figure}
+      \includegraphics[width=\linewidth]{workflow/fig.pdf}
+      \caption{Workflow}
+    \end{figure}
+
+    \column{0.40\linewidth}
+    \begin{itemize}
+      \small
+      \item Master-worker pattern is used.
+      \item Initial frequency samples are generated and distributed.
+      \item Each worker node runs simulation.
+      \item Simulation results are gathered in master node in which post-processed
+      \item This loops until the normalized prediction energy is smaller than tolerance.
+      \item When loop, master node samples the next frequencies to scatter across computing nodes.
+      \item When terminates, master node exports the final prediction.
+    \end{itemize}
+
+  \end{columns}
+  
+\end{frame}
+
+
+\begin{frame} {Parallel GPR: task chunking}
+
+  \begin{columns}
+
+    \column{0.30\linewidth}
+    \begin{figure}
+      \includegraphics[width=\linewidth]{task-distribution/fig.pdf}
+      \caption{Workflow}
+    \end{figure}
+
+    \column{0.65\linewidth}
+    \begin{itemize}
+      \item \texttt{VWT-IE-Solver} is a frequency-domain (FD) solver, naturally being embarrassingly parallel per frequency.
+      \item In the sense of adaptive sampling, smaller number of added samples is encouraged to gradually reveal the data behavior.
+      \item In general cluster environment, number of computing nodes are expected to be large.
+      \item To grant the full computational capability, Each task is not only divided along the frequency axis but also the angular axis such that the number of tasks matches the number of nodes even when using a small number of added samples.
+    \end{itemize}
+
+  \end{columns}
+  
+\end{frame}
+
+
+
+% \begin{frame} {Workflow}
+
+%   \begin{figure}[B]
+%     \begin{subfigure}{0.65\linewidth}
+%       \includegraphics[width=\linewidth]{workflow/fig.pdf}
+%       \caption{Workflow}
+%     \end{subfigure}
+%     \hfill
+%     \begin{subfigure}{0.30\linewidth}
+%       \includegraphics[width=\linewidth]{task-distribution/fig.pdf}
+%       \caption{MPI Scatter: task distribute}
+%     \end{subfigure}
+%   \end{figure}
+  
+% \end{frame}

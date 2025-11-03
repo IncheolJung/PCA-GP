@@ -1,11 +1,21 @@
 
 
-To run the program using default settings:
+\subsection{Sequential Run}
+
+To run the program using default settings from \texttt{.cfg} files:
 \begin{lstlisting}[language=bash]
+conda activate myenv  # if using anaconda
 python main.py
 \end{lstlisting}
 
-\noindent To see all available arguments:
+\noindent 
+The user may overwrite the default settings using arguments. e.g., the following command will make \texttt{P-GP-ID} to use \texttt{./data/VWT-data/simulation} as the simulation directory, and will overwrite the corresponding \texttt{.cfg} file.
+\begin{lstlisting}[language=bash]
+python main.py -p ./data/VWT-data/simulation
+\end{lstlisting}
+
+\noindent 
+To see all available arguments:
 \begin{lstlisting}[language=bash]
 python main.py -h
 \end{lstlisting}
@@ -17,11 +27,11 @@ python main.py -h
   \hline \hline
    & Value & Meaning \\
   \hline
-  \texttt{-p} & ./data/VWT-data/circylinder & simulation directory \\
+  \texttt{-p} & ./data/VWT-data/sphere & simulation directory \\
   \texttt{-m} &   & model name (\texttt{*.domain}) is automatically found \\
-  \texttt{-A} & 0 180 181 & angular sweep settings: \texttt{np.linspace(0, 180, 181)} \\
+  \texttt{-A} & 0 180 1 & angular window will be set to [0, 180] DEG with 1 DEG interval \\
   \texttt{-S} & 0 & phi-sweep \\
-  \texttt{-F} & 100 300 & frequency band will be set to [100, 300] MHz \\
+  \texttt{-F} & 1000 2000 1 & frequency band will be set to [1000, 2000] MHz with 1 MHz interval \\
   \texttt{-v} &   & no validation \\
   \texttt{-a} & 0 & acquisition function: maximum variance \\
   \texttt{-x} & 1 & x-data normalization strategy: z-score (standard normalization) \\
@@ -30,6 +40,30 @@ python main.py -h
   \texttt{-t} & 3 & number of terms used for Gaussian process kernel \\
   \texttt{-s} & 1 & sampling strategy: Latin Hypercube Sampling \\
   \texttt{-i} & 20 & maximum iteration for Gaussian Process \\
-  \texttt{-T} & 1e-5 & IVR tolerance; tolerance for Gaussian Process \\
+  \texttt{-T} & 5e-5 & IVR tolerance; tolerance for Gaussian Process \\
   \hline \hline
 \end{tabular}
+
+
+
+\subsection{Parallel Run}
+
+To run the program using MPI using 4 nodes:
+\begin{lstlisting}[language=bash]
+mpirun -n 4 python main.py
+\end{lstlisting}
+
+\noindent
+When using \texttt{Anaconda}, the virtual environment needs to be activated on each computing node. The user may create a bash file:
+\begin{lstlisting}[language=bash]
+#!/bin/bash   file: run_node.sh
+unset DISPLAY   # disables GNOME
+export OMP_NUM_THREADS=$(nproc)   # allow each node to use maximum cores
+source $(conda info --base)/etc/profile.d/conda.sh  # enables anaconda
+conda activate myenv   # activates the virtual environment
+python main.py   # runs P-GP-ID
+\end{lstlisting}
+and then run the bash code:
+\begin{lstlisting}[language=bash]
+mpirun -n 4 run_node.sh
+\end{lstlisting}

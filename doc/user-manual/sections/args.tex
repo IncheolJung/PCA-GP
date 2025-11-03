@@ -11,25 +11,25 @@ This section dedicates to explain each argument given to \texttt{P-GP-ID}.
   \item \texttt{-m}, \texttt{--model-name}: 
   \\It is the name of the simulation under the simulation directory, which is the name of \texttt{.domain} file. For instance, if user has set up a simulation under \texttt{sim} directory with \texttt{model.domain} under the directory, then the correct argument is ``model.'' If not provided, the code will attept to find \texttt{.domain} file under the simulation directory. If there is more than one \texttt{.domain} file, the automatic search fails with a \texttt{Runtime Error}.
   \item \texttt{-A}, \texttt{--angle}, \texttt{--angle-settings}: 
-  \\Requires 3 arguments: [start, end, number] of angles to sweep. For example, [0, 100, 5] will create [0, 25, 50, 75, 100]
+  \\Requires 3 arguments: [start, end, step] of angles to sweep. For example, [0, 100, 25] will create [0, 25, 50, 75, 100]
   \item \texttt{-S}, \texttt{--ast}, \texttt{--angular-sweep-type}: 
   \\Type of angular sweep. Currently, the code relies on a single angular sweep either $\phi$- or $\theta$-sweep. 0: $\phi$-sweep, 1: $\theta$-sweep
   \item \texttt{-F}, \texttt{--freq}, \texttt{--frequency-settings}: 
-  \\Requires 3 arguments: [start, end, number] of frequencies. All frequency samples will be bound to this limit. ``number'' will be used as number of samples for calculating acquisition function, final output, and validation (if enabled).
+  \\Requires 3 arguments: [start, end, step] of frequencies. For example, [0, 180, 60] will create [0, 60, 120, 180]. The predicted farfield data for the corresponding frequencies will be exported to \texttt{EFAR} directory. The total number of frequencies will also be used as the number of candidates for adaptive sampling process, thus it is recommended not to use too coarse sampling.
   \item \texttt{-v}, \texttt{--no-validate}: 
   \\\textbf{For Debugging Purpose.} Flag to validate. At the end of all process, \texttt{P-GP-ID} will attempt to validate the accuracy by calculating RMSE of the prediction and ground-truth for grid-sampled inputs. This means, if the corresponding grid-sampled ground-truth is not prepared, the code will attempt to run simulations over the entire validation points.
   \item \texttt{-a}, \texttt{--ax-fx}, \texttt{--acquisition-function}: 
   \\Type of acquisition function for adaptive sampling. An integer $\in [0, 2]$ can be given. User can choose between [maximum variance, expected improvement, upper confidence bound]. Defaults to 0.
   \item \texttt{-n}, \texttt{--n-init}: 
-  \\Initial number of frequency sampling. The initial samples are always sampled with Latin Hypercube Sampling. Defaults to 3.
+  \\Initial number of frequency sampling. The initial samples are always sampled with Latin Hypercube Sampling. For efficient simulation, the number is recommended to be chosen as a divisor of the number of the number of computing nodes. Defaults to 3.
   \item \texttt{--add}, \texttt{--freq-add}: 
-  \\Number of added frequency samples per Gaussian Process iteration. Defaults to 1.
+  \\Number of added frequency samples per Gaussian Process iteration. Defaults to 1. For efficient simulation, the number is recommended to be chosen as a divisor of the number of the number of computing nodes, and not to be too large. e.g., when the cluster system has 36 nodes, a good candidate for \texttt{--add} argument will be [1, 2, 3, 4, 6].
   \item \texttt{-t}, \texttt{--terms}: 
-  \\Terms. Currently stacked RBFP kernel is used, where terms will define the number of stacks.
+  \\Terms. Currently stacked RBFP kernel is used, where terms will define the number of stacks. Larger number will be beneficial for the GPR engine to capture complex spectral bahavior but will increase computational complexity as well. Defaults to 3.
   \item \texttt{-s}, \texttt{--sample}, \texttt{--sampling-strategy}: 
-  \\Type of sampling strategy. 0 or 1 can be given. User can choose between [Grid Sampling, Latin Hypercube Sampling]. Defaults to 0.
+  \\Type of sampling strategy. 0 or 1 can be given. User can choose between [Grid Sampling, Latin Hypercube Sampling]. Grid Sampling has higher chance to encounter a \texttt{RuntimeError} in adaptive sampling. Defaults to 1.
   \item \texttt{-i}, \texttt{--max-iter}: 
   \\Maximum iteration for Adaptive Sampler. Therefore, the maximum frequency samples will be determined as $\boxed{\texttt{-n}} + \boxed{\texttt{--add}} * \boxed{\texttt{-i}}$.
   \item \texttt{-T}, \texttt{--tol}: 
-  \\Tolerance for integrated variance reduction (IVR; weighted sum of variances over basis). Defaults to 1e5.
+  \\Tolerance for integrated variance reduction (normalized IVR; normalized weighted sum of variances over basis). Defaults to 1e5.
 \end{itemize}

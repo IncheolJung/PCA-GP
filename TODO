@@ -1,0 +1,27 @@
+- More efficient parallelization:
+    - Adaptive chunking
+        1. Memorize the time spent for each task chunk and each node.
+        2. Dynamically change the chunk-size per node depending on the parameter
+        3. Very difficult to implement: how to measure/chunk the task?
+    - Dynamic work distribution
+        1. Relatively simple to implement
+        2. Master node still has too large responsibility
+        3. Obstacles: 
+            master node may not respond while running simulations
+            asyncronized programming needed
+    - Work stealing algorithm
+        1. Master node does not distribute: workers steal from master
+        2. Obstacles: 
+            master node may not respond while running simulations
+            asyncronized programming needed
+
+
+- Parallel training
+    - Run GP training per computing node
+    - How to communicate a GP model?
+
+
+- Adaptive mesh selection
+    - Initially refine: based on the frequency band info
+    - Adaptively refine: only refine when needed
+    - Should I let users do the job?

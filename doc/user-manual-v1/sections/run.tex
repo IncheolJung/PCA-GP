@@ -1,0 +1,35 @@
+
+
+To run the program using default settings:
+\begin{lstlisting}[language=bash]
+python main.py
+\end{lstlisting}
+
+\noindent To see all available arguments:
+\begin{lstlisting}[language=bash]
+python main.py -h
+\end{lstlisting}
+
+\noindent Descriptions on each argument are in the \hyperref[SEC:args]{following section}.
+
+\noindent Following is the list of default arguments:\\
+\begin{tabular}{r | l | l}
+  \hline \hline
+   & Value & Meaning \\
+  \hline
+  \texttt{-p} & ./data/VWT-data/circylinder & simulation directory \\
+  \texttt{-m} &   & model name (\texttt{*.domain}) is automatically found \\
+  \texttt{-A} & 0 180 181 & angular sweep settings: \texttt{np.linspace(0, 180, 181)} \\
+  \texttt{-S} & 0 & phi-sweep \\
+  \texttt{-F} & 100 300 & frequency band will be set to [100, 300] MHz \\
+  \texttt{-v} &   & no validation \\
+  \texttt{-a} & 0 & acquisition function: maximum variance \\
+  \texttt{-x} & 1 & x-data normalization strategy: z-score (standard normalization) \\
+  \texttt{-n} & 3 & number of initial frequency samples \\
+  \texttt{--add} & 1 & added frequency samples per iteration \\
+  \texttt{-t} & 3 & number of terms used for Gaussian process kernel \\
+  \texttt{-s} & 1 & sampling strategy: Latin Hypercube Sampling \\
+  \texttt{-i} & 20 & maximum iteration for Gaussian Process \\
+  \texttt{-T} & 1e-5 & IVR tolerance; tolerance for Gaussian Process \\
+  \hline \hline
+\end{tabular}

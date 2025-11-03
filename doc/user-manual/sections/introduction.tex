@@ -1,3 +1,21 @@
 
 
-This manual is a user guide to use \texttt{Parallelized Gaussian Process Interpolative Decomposition} (\texttt{P-GP-ID}) enabling \textbf{efficient frequency sweep} for \texttt{VWT-IE-Solver-Unified-DG.x} solver. This code pre-requisites \texttt{Python} with installed packages \href{https://numpy.org/}{\texttt{numpy}}, \href{https://scipy.org/}{\texttt{scipy}}, and \href{https://scikit-learn.org/stable/}{\texttt{scikit-learn}}. Also, the current version is \textbf{alpha-version}, indicating upcomming updates may lead many parts of this manual to be deprecated.
+This manual is a user guide to use Parallelized Gaussian Process Interpolative Decomposition (\texttt{P-GP-ID}) enabling \textbf{efficient frequency sweep} for \texttt{VWT-IE-Solver-Unified-DG.x} solver. \texttt{P-GP-ID} employs Gaussian process regression (GPR) with an adaptive sampler to maximize accuracy with minimum number of simulations. Furthermore, the process is parallelized using \texttt{OpenMPI} for efficient computation.
+
+\texttt{P-GP-ID} runs in an iterative manner, adaptively requesting new samples that minimizes the prediction uncertainty. For the samples, the embedded full-wave solver \texttt{VWT-IE-Solver-Unified-DG.x} is called to provide ground truth for the requested sampling point. This process is parallelized and the workflow is illustrated in Fig.~\ref{FIG:workflow}.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.66\textwidth}
+  \includegraphics[width=\linewidth]{figures/workflow/fig.pdf}
+  \caption{}
+\end{subfigure}
+\begin{subfigure}{0.33\textwidth}
+  \includegraphics[width=\linewidth]{figures/task-distribution/fig.pdf}
+  \caption{}
+\end{subfigure}
+  \caption{(a) Workflow of \texttt{P-GP-ID} and (b) Task chunking for each node}
+  \label{FIG:workflow}
+\end{figure}
+
+Since a frequency-domain solver is used, the tasks may naturally be distributed per frequency. However, considering a general cluster computing environment, the number of requested frequency is likely to be smaller than the number of computing nodes. To distribute the task across all the nodes, tasks are chunked in a 2-dimensional (2D) manner: frequency and incident angle.

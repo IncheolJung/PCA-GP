@@ -121,6 +121,7 @@ class GPModel(gpytorch.models.ExactGP):
             prediction.append(ystd.detach().cpu().numpy())
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Output shape:", ypred.shape)
+        if len(prediction)==1: prediction = prediction[0]
         return prediction
     
 

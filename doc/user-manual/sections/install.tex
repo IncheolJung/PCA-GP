@@ -1,8 +1,96 @@
 
 
-\texttt{P-GP-ID} is written in \texttt{Python}, and is recommended to be run under virtual environments such as \href{https://www.anaconda.com/docs/getting-started/miniconda/install}{\texttt{anaconda}}. Once \texttt{anaconda} is installed, user may create an environment (in this example named as \texttt{myenv}) with required packages and then activate it.
+% \texttt{P-GP-ID} is written in \texttt{Python}, and is recommended to be run under virtual environments such as \href{https://www.anaconda.com/docs/getting-started/miniconda/install}{\texttt{anaconda}}. Once \texttt{anaconda} is installed, user may create an environment (in this example named as \texttt{myenv}) with required packages and then activate it.
 
+% \begin{lstlisting}[language=bash]
+% conda create -n myenv numpy scipy scikit-learn
+% conda activate myenv
+% \end{lstlisting}
+
+\subsection{pre-requisites}
+
+\texttt{P-GP-ID} is written in \texttt{Python} which is an interpreter language. Therefore, the user needs to install the python dependencies for the code to run properly:
+\begin{itemize}
+  \itemsep 0em
+  \item Python
+  \item gpytorch
+  \item scikit-learn
+  \item numpy
+  \item scipy
+  \item mpi4py
+  \item matplotlib (To use validation)
+	\item openmpi (the same version in the system)
+\end{itemize}
+
+\noindent
+\texttt{P-GP-ID} also depends on the following system dependencies:
+\begin{itemize}
+  \itemsep 0em
+  \item openmpi (the same version as the Python module)
+  \item rsync (if using a distributed filesystem)
+\end{itemize}
+
+\noindent
+If the user is not willing to use a virtual environment (which is NOT recommended), the packages may be installed in system level. To use a virtual environment, refer to the following section.
 \begin{lstlisting}[language=bash]
-conda create -n myenv numpy scipy scikit-learn
+sudo apt install pip
+pip install gpytorch scikit-learn numpy scipy mpi4py matplotlib openmpi
+\end{lstlisting}
+
+\noindent
+If the user is attempting to run \texttt{P-GP-ID} in a cluster environment using a job scheduler (\texttt{SLURM}, etc.; This is the highly likely if the user is an end-user of the cluster), the user may ignore the system dependencies. If the cluster environment is without a job scheduler and using a distributed filesystem, install \texttt{rsync} if not installed:
+\begin{lstlisting}[language=bash]
+sudo apt install rsync
+\end{lstlisting}
+
+
+
+\subsection{\texttt{Anaconda}}
+
+When using an interpreter language such as \texttt{Python}, to have the system environment intact, it is highly recommended to use a virtual environment. In this user guide, \texttt{Anaconda} is used. To install anaconda, refer to \href{https://www.anaconda.com/download}{\texttt{Anaconda}}, or \href{https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer}{\texttt{miniconda}}.
+
+Once \texttt{Anaconda} is installed, a new environment (\texttt{myenv} in the example) may be created using the pre-defined environment configuration file:
+\begin{lstlisting}[language=bash]
+conda env create -n myenv -f gpytorch.yaml
+\end{lstlisting}
+This is not guranteed to work in any environment since dependencies may differ machine by machine. In such cases, the user may try to create an environment manually:
+\begin{lstlisting}[language=bash]
+conda create -n myenv gpytorch scikit-learn numpy scipy mpi4py matplotlib openmpi
+\end{lstlisting}
+
+
+
+\subsection{\texttt{openmpi}}
+
+\texttt{P-GP-ID} use \texttt{OpenMPI} for parallel computing in a distributed memory environment. However, even if the \texttt{OpenMPI} environment is already successfully established, the use of virtual environment may jeopardize it. The most likely reason of error is version mismatching across nodes. To verify, use the following command on each node for version checking:
+\begin{lstlisting}[language=bash]
+conda run -n myenv python -m mpi4py.run --mpi-lib-version
+\end{lstlisting}
+The version must match across all nodes but also their system \texttt{openmpi} version:
+\begin{lstlisting}[language=bash]
+conda deactivate  # run the following command outside the virtual environment
+mpirun --version
+\end{lstlisting}
+
+In case of version mismatching, the user may attempt to install the specific version of \texttt{openmpi} in each virtual environment. However, considering the system-level \texttt{openmpi} is successfully established, the user may use the advantage of it. First, check and store the path to the openmpi installation
+\begin{lstlisting}[language=bash]
+export OMPI_DIR="$(dirname "$(dirname "$(which mpirun)")")"
+echo $OMPI_DIR
+ls $OMPI_DIR/bin/mpirun
+\end{lstlisting}
+And then re-build mpi4py using the system \texttt{openmpi} as backend:
+\begin{lstlisting}[language=bash]
 conda activate myenv
+conda install pip # if not installed
+export MPICC=$OMPI_DIR/bin/mpicc
+export MPICXX=$OMPI_DIR/bin/mpicxx
+export PATH=$OMPI_DIR/bin:$PATH
+export LD_LIBRARY_PATH=$OMPI_DIR/lib:$LD_LIBRARY_PATH
+# Disable conda's compiler_compat wrappers
+export _CONDA_PYTHON_SYSCONFIGDATA_NAME=
+export CONDA_BUILD_SYSROOT=
+# Force use of system ld
+export LDFLAGS="-Wl,-rpath,$OMPI_DIR/lib"
+# Now build mpi4py using system compilers
+CC=$MPICC CXX=$MPICXX python -m pip install --no-cache-dir --no-binary mpi4py mpi4py
 \end{lstlisting}

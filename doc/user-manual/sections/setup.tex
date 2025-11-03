@@ -1,5 +1,131 @@
 
 
-\texttt{P-GP-ID} itself is not a solver, but a Gaussian process-based tool that enables advanced frequency-interpolation with active sampling. Currently, \texttt{VWT-IE-Solver-Unified-DG.x} is embedded as the backend sover to provide the high fidelity solutions. To set up the problem of interest, user needs to create setup a simulation directory according to \texttt{VWT-IE-Solver-Unified-DG.x} user manual. This directory then needs to go under \texttt{data/VWTdata} directory.
+% \texttt{P-GP-ID} itself is not a solver, but a Gaussian process-based tool that enables advanced frequency-interpolation with active sampling. Currently, \texttt{VWT-IE-Solver-Unified-DG.x} is embedded as the backend sover to provide the high fidelity solutions. To set up the problem of interest, user needs to create setup a simulation directory according to \texttt{VWT-IE-Solver-Unified-DG.x} user manual. This directory then needs to go under \texttt{data/VWTdata} directory.
 
-This created directory will be supplied as an argument to the \texttt{main.py}. Otherwise, it will automatically fall back to its default setting: \texttt{./data/VWT-data/circylinder}
+% This created directory will be supplied as an argument to the \texttt{main.py}. Otherwise, it will automatically fall back to its default setting: \texttt{./data/VWT-data/circylinder}
+
+
+\subsection{Simulation directory}
+
+\definecolor{dircolor}{rgb}{0.2,0.4,0.8}      % bright blue
+\definecolor{execolor}{rgb}{0.6,0.0,0.0}      % dark red
+\definecolor{filecolor}{rgb}{0.0,0.6,0.0}      % green
+To allow \texttt{P-GP-ID} to use the full-wave solver \texttt{VWT-IE-Solver-Unified-DG.x}, a simulation directory that contains the simulation inputs needs to be setup. For the detailed information regarding the simulations inputs, refer to the \texttt{VWT-IE-Solver-Unified-DG.x} user manual. Make a directory (default: \texttt{./data/VWT-data}) that contains the simulation directory and \texttt{VWT-IE-Solver-Unified-DG.x}:
+\begin{tcolorbox}[
+  colback=backcolour, 
+  colframe=gray!50,
+  boxrule=0pt,
+  arc=0pt,
+  left=0mm, right=2mm, top=2mm, bottom=2mm,
+]
+\dirtree{%
+.1 \textcolor{dircolor}{data/VWT-data/}.
+.2 \textcolor{execolor}{VWT-IE-Solver-Unified-DG.x}.
+.2 \textcolor{dircolor}{simulation/}.
+.3 \textcolor{filecolor}{model\_name.domain}.
+.3 \textcolor{filecolor}{\ldots}.
+.3 \textcolor{filecolor}{subdomain\_nameN.tri}.
+.3 \textcolor{filecolor}{subdomain\_nameN.rgmatflg}.
+}
+\end{tcolorbox}
+This directory must be supplied to \texttt{P-GP-ID} by arguments, the process of which will be depicted in following sections. For future use, the user may add addtional directories under \texttt{data/VWT-data/}:
+\begin{tcolorbox}[
+  colback=backcolour, 
+  colframe=gray!50,
+  boxrule=0pt,
+  arc=0pt,
+  left=0mm, right=2mm, top=2mm, bottom=2mm,
+]
+\dirtree{%
+.1 \textcolor{dircolor}{data/VWT-data/}.
+.2 \textcolor{execolor}{VWT-IE-Solver-Unified-DG.x}.
+.2 \textcolor{dircolor}{simulation1/}.
+.2 \textcolor{dircolor}{simulation2/}.
+}
+\end{tcolorbox}
+All the simulations under the directory \texttt{data/VWT-data/} will attempt to run simulations with the executable included in the directory (\texttt{data/VWT-data/WT-IE-Solver-Unified-DG.x}).
+
+
+\subsection{Configuration}
+
+\texttt{P-GP-ID} takes three configuration files:
+\begin{itemize}
+  \itemsep 0ex
+  \item \texttt{config\_simulation.cfg}
+  \item \texttt{config\_gaussian\_process.cfg}
+  \item \texttt{hosts.txt}
+\end{itemize}
+\texttt{hosts.txt} is exclusively used for \texttt{MPI} jobs in a distributed filesystem. If the user is using a shared filesystem (most likely unless the user is using an in-house cluster), this file is not necessary.
+
+The other two files provide arguments to \texttt{P-GP-ID}. Configuration files support both \texttt{Python} style (\texttt{\#}) and \texttt{C} style (\texttt{//}) comments. Any lines decorated with the comment keywords are treated as comments, and can be used to label each paramters for readibility. Any lines without the decorations are arguments which are supplied to \texttt{P-GP-ID}, and position sensitive. Therefore, they must strictly be in order.
+
+The configurations files will be automatically generated if missing, using the default arguments. The user may use these as templates. Also, while running, \texttt{P-GP-ID} will attempt to overwrite the configuration files with the given arguments. The followings are examples of configuration files.
+
+\noindent
+\texttt{config\_simulation.cfg}:
+\begin{lstlisting}[language=python]
+### Simulation Path ###
+# default path
+# The user may use multiple lines but also may mix # and //
+# If multiple line comments are used, they will be merged into one-line comment later.
+./data/VWT-data/sphere
+### Simulation (Model) Name ###    
+# Automatically detected if None
+None
+### Input Angle Settings ###    
+# [start, end, step] in degrees
+0 180 1
+### Angular Sweep Type (0: phi-sweep, 1: theta-sweep) ###
+0
+### Frequency Settings ###
+# [start, end, step] in MHz
+1000 2000 1
+### Validate? ###
+# True for debugging purpose only.
+# case-insensitive
+# if true, after the code completes training, the code actually runs frequency sweep to compare it with its prediction.
+False
+\end{lstlisting}
+
+\noindent
+\texttt{config\_gaussian\_process.cfg}:
+\begin{lstlisting}[language=C++]
+// Acquisition Function Type (0: maximum variance, 1: expected improvement, 2: upper confidence bound)
+0
+// X normalization Type (0: do not normalize, 1: z-score, 2: min-max, 3: power transform, 4: standardized power transform, 5: scaled z-score)
+// Recommended to choose between 1 or 2
+1
+// Number of Initial Samples
+// This is the number of initial frequencies. The code will initially run simulations for them
+3
+// Sampling Addition per Iteration
+// Will be best if the number is a divisor of the number of computing nodes
+// Will be best not use too large numbers
+// e.g., [2, 3, 4, 6] when the cluster has 36 computing nodes
+1
+// Number of Terms (LF-NSM Kernel Parameter)
+// increase if the behavior is complicated
+3
+// Sampling Strategy (0: grid, 1: latin-hypercube)
+1
+// Maximum Iteration for Gaussian Process
+20
+// Prediction Energy Tolerance
+1e-3
+\end{lstlisting}
+
+
+\subsection{\texttt{hosts.txt} (See when using a distributed filesystem)}
+
+This subsection is written under the assumption that the system in which \texttt{P-GP-ID} runs is without a job scheduler nor a shared filesystem. Unless the user themselves constructed and maintains the cluster, this section will not be needed: the cluster system should be using both job scheduler such as \texttt{SLURM} and shared filesystem.
+
+Without a job scheduler, the user will have to supply the identity of computing nodes (either in ip address or DNS) either by a file or arguments:
+\begin{lstlisting}[language=bash]
+mpirun --hostfile hosts.txt -n 4 run.sh
+mpirun --host node01:2,node02:2 -n 4 run.sh
+\end{lstlisting}
+where \texttt{hosts.txt} contains
+\begin{lstlisting}[language=bash]
+192.168.x.y1 slots=2
+192.168.x.y2 slots=2
+\end{lstlisting}

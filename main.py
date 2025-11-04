@@ -147,7 +147,7 @@ def write_config(filename, config: dict):
                 config_keys.extend(['']*(len(config_values) - len(config_keys)))
         config = {k:v for k,v in zip(config_keys, config_values)}
     data = '\n'.join(['\n'.join([f"{k}", f"{v}"]) for k,v in config.items()])
-    open(filename, 'w').write(data)
+    open(filename, 'w').write(data+'\n')
     return 0
     
 
@@ -484,6 +484,7 @@ def main():
         print(f"  >> terms: {terms}")
         print(f"  >> max_iter: {max_iter}")
         print(f"  >> tol: {tol}")
+        print(f"  >> frequency: [start, end, step] = {f_min, f_max, f_step}")
         print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, step] = {a_min, a_max, a_step}")
         print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
         stdout.flush()

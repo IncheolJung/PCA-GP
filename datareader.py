@@ -55,7 +55,7 @@ class fileIOdatareader:
             # return np.array(list(results))
         else:
             _, idx = self._tree.query((freq, angle))
-        return self.y[idx]
+        return 1e-3*self.y[idx]
     
     @property
     def x(self):

@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1762207173 "main.aux" "main.bbl" "main" 1762207814 0
-  "./main-blx.bib" 1762207814 341 527261c0e522e33e87b04216e405a80e ""
+["bibtex main"] 1762211702 "main.aux" "main.bbl" "main" 1762218652 0
+  "./main-blx.bib" 1762218652 341 527261c0e522e33e87b04216e405a80e ""
   "./refs.bib" 1754941276 1684 5adf8477a59ba2f25fe9bfe8f7bd9cf6 ""
   "/usr/share/texlive/texmf-dist/bibtex/bst/biblatex/biblatex.bst" 1656017808 65483 3b5a53ada692a06ce416d088de6a391b ""
-  "main.aux" 1762207814 3208 2add1c61575bd35ab1b2c082da91d2bc "pdflatex"
+  "main.aux" 1762218652 3337 bb77bd00c459ddb0b6aae7661f654c0c "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1762207813 "/home/incheol/Codes/PCA-GP/doc/summary-slides/main.tex" "main.pdf" "main" 1762207814 0
+["pdflatex"] 1762218651 "/home/incheol/Codes/PCA-GP/doc/summary-slides/main.tex" "main.pdf" "main" 1762218652 0
   "/etc/texmf/web2c/texmf.cnf" 1732339562 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/incheol/Codes/PCA-GP/doc/summary-slides/main.tex" 1762206662 1127 3969b411a0ad31ff703c513c8f32c205 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -243,6 +243,8 @@
   "/usr/share/texlive/texmf-dist/tex/latex/multirow/multirow.sty" 1615845910 6149 2398eec4faa1ee24ff761581e580ecf1 ""
   "/usr/share/texlive/texmf-dist/tex/latex/mwe/example-grid-100x100pt.pdf" 1522444699 16951 ede4d08264514da0acd15a43d636f432 ""
   "/usr/share/texlive/texmf-dist/tex/latex/mwe/example-grid-100x100pt.tex" 1336516272 684 0b53d31888cc20b3825dedb45caf3339 ""
+  "/usr/share/texlive/texmf-dist/tex/latex/mwe/example-image.pdf" 1522444699 17568 8e23b7d568553840c1e0d1200fbe2c18 ""
+  "/usr/share/texlive/texmf-dist/tex/latex/mwe/example-image.tex" 1336516272 472 ad3eb26372aefe8d1055d70eab56d506 ""
   "/usr/share/texlive/texmf-dist/tex/latex/natbib/bibentry.sty" 1193854157 3400 e000bb2fc43fc077e107f62f8c25613e ""
   "/usr/share/texlive/texmf-dist/tex/latex/oberdiek/ifdraft.sty" 1575152444 1922 5bdcc31b0573e5e7f31c36f1b88b6a7d ""
   "/usr/share/texlive/texmf-dist/tex/latex/ocgx2/ocgbase.sty" 1659645209 26167 fc59d0fc02b63998dd272039bf5ea12a ""
@@ -271,10 +273,12 @@
   "/usr/share/texlive/texmf-dist/tex/latex/zref/zref-abspage.sty" 1649363507 2245 c8a4088d07cffc2e5207730c738edd76 ""
   "/usr/share/texlive/texmf-dist/tex/latex/zref/zref-base.sty" 1649363507 20785 71a3d72ab517959a6979c27e6176bec1 ""
   "/usr/share/texlive/texmf-dist/web2c/texmf.cnf" 1681034085 39561 34c98e380bf7c7201ee6a7909aff625a ""
+  "/usr/share/texmf/fonts/type1/public/lm/lmss17.pfb" 1255129361 97155 77b0a2ea02ee9c950117adae5f41f9c9 ""
   "/usr/share/texmf/fonts/type1/public/lm/lmss8.pfb" 1255129361 94400 e33ecfb646a9f148e2e53da01a9168fe ""
   "/usr/share/texmf/web2c/texmf.cnf" 1681034085 39561 34c98e380bf7c7201ee6a7909aff625a ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1733862589 449547 bd52ef4c75560fde64b0897c2ce94acc ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1742501830 6598578 fda1073cf4ea28a1ab6b9ebedab5c1a8 ""
+  "Figures//demo1/GP_results_2d.png" 1762218619 597984 ef1b8ae6a295d4ec4cf8790d349ce29b ""
   "Figures//task-distribution/fig.pdf" 1760194411 41869 769b5351b9f4b16198b798ad829cc6da ""
   "Figures//workflow/fig.pdf" 1760196050 87824 889e7a62859e21418dc6ea9ce03bcd43 ""
   "Slides/appendix.tex" 1762206435 1020 e65acc51aea8baf2361095a1e61ca590 ""
@@ -283,14 +287,14 @@
   "Slides/demo-VWT-robustness.tex" 1762206793 63 4896c6a057e14c8af6357523103a4c01 ""
   "Slides/introduction.tex" 1762198985 541 e976b2a1421993f8f8c8c519ec18b611 ""
   "Slides/parallelGP-workflow.tex" 1762206637 2166 209b5fef88f93aae343b0b2d2d4f5f5b ""
-  "Slides/parallelGP.tex" 1762206760 126 1fd1de38e23c199a98e3c6c44c002a92 ""
-  "Slides/sequentialGP.tex" 1762206571 230 5ba86cb20be8e95410ea64c9463d7fd0 ""
+  "Slides/parallelGP.tex" 1762211912 126 530260aaa5eeecef94a4a4ee80d9cd98 ""
+  "Slides/sequentialGP.tex" 1762218651 1078 ad8d03d40f28a338ffcf051ce450bbb4 ""
   "Slides/theory.tex" 1762207813 3360 bc7fca81bbd598713150c21fc68a9e5d ""
-  "main.aux" 1762207814 3208 2add1c61575bd35ab1b2c082da91d2bc "pdflatex"
-  "main.bbl" 1762207173 513 205fa30ee4c093bb2bc4676324ab99fd "bibtex main"
-  "main.nav" 1762207814 1667 223530e0d280496bcaab89de82b2e7ab "pdflatex"
-  "main.out" 1762207814 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "main.run.xml" 1762207814 2613 0659f7ffdf9e5865d7137fc213b8e15c "pdflatex"
+  "main.aux" 1762218652 3337 bb77bd00c459ddb0b6aae7661f654c0c "pdflatex"
+  "main.bbl" 1762211702 513 205fa30ee4c093bb2bc4676324ab99fd "bibtex main"
+  "main.nav" 1762218652 1760 80a68e95556c790f6368970db289fcf5 "pdflatex"
+  "main.out" 1762218652 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "main.run.xml" 1762218652 2613 0659f7ffdf9e5865d7137fc213b8e15c "pdflatex"
   "main.tex" 1762206662 1127 3969b411a0ad31ff703c513c8f32c205 ""
   "mytheme.tex" 1762188215 2335 0ba0e13dd340953a256a6b02453c1836 ""
   (generated)

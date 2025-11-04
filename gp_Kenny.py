@@ -110,8 +110,9 @@ class GPModel(gpytorch.models.ExactGP):
         preds = []
         for i in range(0, x.size(0), batch_size):
             x_batch = x[i:i + batch_size]
-            with torch.no_grad(), gpytorch.settings.max_preconditioner_size(10), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
+            with torch.no_grad(), gpytorch.settings.fast_pred_var(False), warnings.catch_warnings():
                 warnings.simplefilter("ignore", GPInputWarning)
+                # pred = self.__call__(x_batch)
                 pred = self.likelihood(self.__call__(x_batch))
             preds.append(pred)
         ypred = torch.cat([self.y_denormalizer(p.mean) for p in preds])
@@ -136,7 +137,9 @@ def build_model(
         #     lower_bound * torch.ones_like(train_y)
         # ).double().to(device)
         likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
-            # noise_prior=gpytorch.priors.LogNormalPrior(-4, 1.0),
+            # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
+            noise_prior=gpytorch.priors.LogNormalPrior(-20.0, 0.3),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
             num_tasks=train_y.shape[-1],
         ).double().to(device)
@@ -148,7 +151,9 @@ def build_model(
         get_noise_bounds = lambda: f"{torch.min(likelihood.task_noises):.2e}, {torch.max(likelihood.task_noises):.2e}"
     else:
         likelihood = gpytorch.likelihoods.GaussianLikelihood(
-            # noise_prior=gpytorch.priors.LogNormalPrior(-4, 1.0),
+            # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
+            noise_prior=gpytorch.priors.LogNormalPrior(-20.0, 0.3),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
         ).double().to(device)
         # likelihood.noise_covar.initialize(noise=lower_bound)
@@ -216,17 +221,15 @@ def train_model_per_restart(
     #     {'params': unique(likelihood_params), 'lr': 1e-2},
     # ])
 
-    train_lr = uniform(0.2, 0.6)
+    mll = gpytorch.mlls.ExactMarginalLogLikelihood(
+        likelihood, model
+    ).to(device)
+
+    train_lr = uniform(0.05, 0.3)
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=train_lr, weight_decay=1e-6
     )
-    # optimizer = torch.optim.AdamW(
-    #     model.parameters(), lr=0.2, weight_decay=1e-6
-    # )
-    mll = gpytorch.mlls.ExactMarginalLogLikelihood(
-        likelihood, model
-    ).to(device)
     # scheduler = None
     scheduler_class = torch.optim.lr_scheduler.OneCycleLR
     scheduler = scheduler_class(optimizer, max_lr=train_lr, total_steps=training_iter, anneal_strategy="linear")
@@ -245,7 +248,7 @@ def train_model_per_restart(
     # number of epochs to wait without improvement (Early stop cond)
     # patience = 20
     patience = int(training_iter/6)
-    # patience = 10 * min(10, int(log10(training_iter))) + 5
+    # # patience = 10 * min(10, int(log10(training_iter))) + 5
 
     best_loss = float("inf")
     patience_counter = 0
@@ -297,11 +300,12 @@ def train_model_per_restart(
         print(end_phrase, flush=True, end='\033[K\r')
 
     # ------- Fine-tuning ------- 
+    # fine_tuning_iter = training_iter
     fine_tuning_iter = max(50, training_iter // 10)
     # fine_tuning_iter = training_iter - i + 21
     # fine_tuning_lr   = 2*scheduler.get_last_lr()[0]    # 2*last_lr
-    fine_tuning_lr   = train_lr
-    # end_phrase = f"Training.... "
+    fine_tuning_lr   = .5 * train_lr
+    # end_phrase, tab = f"Training.... ", " "*2
     # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
     finetuner = torch.optim.LBFGS(
         model.parameters(), lr=fine_tuning_lr, 

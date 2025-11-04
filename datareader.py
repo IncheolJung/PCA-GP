@@ -402,12 +402,14 @@ class OnFlySolver:
         
         if not dirs: return 0   # empty dirname called
 
-        from subprocess import Popen
-        dest = f"{self.root_ip}:{self.workingpath}/tmp/"
-        # cmd = ' '.join(['rsync', '-az', dirs_str, dest])
-        # print(f"[Rank {self.rank}] {cmd}")
-        Popen(['rsync', '-az', *map(str, dirs), dest]).wait()
-        Popen(['rm', '-r', *map(str, dirs)]).wait()
+        if self.root_ip is not None:
+            # gather dir if using distributed filesystem
+            from subprocess import Popen
+            dest = f"{self.root_ip}:{self.workingpath}/tmp/"
+            # cmd = ' '.join(['rsync', '-az', dirs_str, dest])
+            # print(f"[Rank {self.rank}] {cmd}")
+            Popen(['rsync', '-az', *map(str, dirs), dest]).wait()
+            Popen(['rm', '-r', *map(str, dirs)]).wait()
         return 0
     
     def _unpack_delivery(self):
@@ -421,11 +423,13 @@ class OnFlySolver:
         return 0
     
     def _get_hostname(self, rank: int = 0):
-        with open('hosts.txt', 'r') as f:
-            ip_addr = f.readlines()[rank].split()
-            if len(ip_addr)==1: pass
-            elif len(ip_addr)>1: ip_addr = ip_addr[0]
-            else: raise RuntimeError('Invalid hosts.txt')
+        try:
+            with open('hosts.txt', 'r') as f:
+                ip_addr = f.readlines()[rank].split()
+                if len(ip_addr)==1: pass
+                elif len(ip_addr)>1: ip_addr = ip_addr[0]
+                else: raise RuntimeError('Invalid hosts.txt')
+        except FileNotFoundError: ip_addr = None
         return ip_addr
     
     def _sync_data(self):

@@ -398,7 +398,7 @@ def main():
     # SOLVER
     # -----------------------
 
-    # solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
     # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
 
     workingpath = config.path
@@ -431,17 +431,17 @@ def main():
     #     sweep_angle_type=1
     #     )
 
-    solver = OnFlySolver(
-        workingpath=workingpath,
-        model_name=config.model,
-        angles=angles, 
-        sweep_angle_type=sweep_type,
-        usempi=usempi, mpicomm=comm
-        )
+    # solver = OnFlySolver(
+    #     workingpath=workingpath,
+    #     model_name=config.model,
+    #     angles=angles, 
+    #     sweep_angle_type=sweep_type,
+    #     usempi=usempi, mpicomm=comm
+    #     )
             
-    config.path = solver.workingpath
+    # config.path = solver.workingpath
     # config.model = solver.model_name
-    parse_and_write_config(config)
+    # parse_and_write_config(config)
     # raise Exception
 
     # solver = OnFlySolverMyMoM(
@@ -513,7 +513,11 @@ def main():
         f_next, ac_fx, POD_energy = \
             rbgp.acquisition_next_frequency(f_min, f_max, f_num, int(config.add))
         if (not usempi) or (usempi and rank==0):
-            print(f"\nIteration {it+1} / {max_iter}: max_acquisition {max(ac_fx):.10f} | pred_to_total_POD_energy_ratio {POD_energy:.10f}")
+            try: max_ac = max(ac_fx)
+            except ValueError: max_ac = float('nan')
+            print(
+                f"\nIteration {it+1} / {max_iter}: max_acquisition {max_ac:.10f} "
+                f"| pred_to_total_POD_energy_ratio {POD_energy:.10f}")
             print("number of frequency samples:", len(rbgp.freqs))
             if POD_energy < tol: 
                 break_token = True
@@ -532,9 +536,11 @@ def main():
         rbgp.update(f_next)
     
     if (not usempi) or (usempi and rank==0):
+        try: max_ac = max(ac_fx)
+        except ValueError: max_ac = float('nan')
         print("\n ======  Stopping criterion met.  ====== \n")
         print("  >> Final iteration:", it+1, "/", max_iter, sep="\t")
-        print("  >> Final acquisition:", max(ac_fx), sep="\t")
+        print("  >> Final acquisition:", max_ac, sep="\t")
         print("  >> Final pred_to_total_POD_energy_ratio:", POD_energy, sep="\t")
         print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
         stdout.flush()

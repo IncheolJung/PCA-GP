@@ -191,6 +191,7 @@ class ReducedBasisGPBASE:
         self.U, self.S, self.Vh = U[:, :self.r], S[:self.r], Vh[:self.r, :]
         # Compute coefficients (project responses on modes)
         self.coeffs = self.U * self.S  # shape (n_freqs, r)
+        # print(self.coeffs.shape, self.Vh.shape)
         return 0
     
     def acquisition_next_frequency(self, f_min, f_max, n_grid=101, n_new_samples=1):
@@ -418,18 +419,72 @@ class ReducedBasisGPMultiTask(ReducedBasisGPBASE):
         
         mu_r, std_r = self.gps_real[0].predict(x_pred, return_std=True)
         mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
+        # data shape: [frequency, coef]
         weight = np.square(self.S)[None, :]
+        weight_sum = np.sum(weight)
         total_mu = np.sum(weight * (mu_r**2  + mu_i**2 ), axis=-1)
         total_var = np.sum(weight * (std_r**2 + std_i**2), axis=-1)
         std_r /= self.gps_real[0]._y_train_std
         std_i /= self.gps_imag[0]._y_train_std
-        weight_sum = np.sum(weight)
+        normalized_total_var = np.sum(weight * (std_r**2 + std_i**2), axis=-1)
         
         scaled_total_mu = total_mu / (weight_sum + 1e-30)
         scaled_total_var = total_var / (weight_sum + 1e-30)
-        frac_predictive = np.mean(total_var) / (weight_sum + 1e-30)
+        frac_predictive = np.mean(normalized_total_var) / (weight_sum + 1e-30)
         # frac_predictive = np.quantile(total_var / (weight_sum + 1e-30), 0.9)
         return scaled_total_mu, scaled_total_var, x_pred, frac_predictive
+    
+    # def _pred_gps(self, f_min, f_max, n_grid, eps=1e-12):
+    #     "pred 2d data directly — corrected analytic estimator"
+    #     x_pred = self.sampler(f_min, f_max, n_grid)
+    #     x_pred = self.normalizerX.transform(x_pred)
+
+    #     # predict means and std (in the *normalized* target space)
+    #     mu_r, std_r = self.gps_real[0].predict(x_pred, return_std=True)  # shape (n_grid, ncoef)
+    #     mu_i, std_i = self.gps_imag[0].predict(x_pred, return_std=True)
+
+    #     # Convert std back to original target units (if you trained on y / y_std)
+    #     ystd_r = getattr(self.gps_real[0], "_y_train_std", 1.0)
+    #     ystd_i = getattr(self.gps_imag[0], "_y_train_std", 1.0)
+    #     std_r_orig = std_r * ystd_r
+    #     std_i_orig = std_i * ystd_i
+
+    #     # means may also be in normalized units — convert to original units if needed
+    #     mu_r_orig = mu_r * ystd_r
+    #     mu_i_orig = mu_i * ystd_i
+
+    #     # weight: shape (1, ncoef) so broadcasting over grid rows
+    #     weight = np.square(self.S)[None, :]  # (1, ncoef)
+    #     weight_sum = np.sum(weight)
+
+    #     # Expected power per grid point including variance terms:
+    #     # E[|c_k|^2] = mu_r^2 + mu_i^2 + var_r + var_i
+    #     var_r = std_r_orig**2
+    #     var_i = std_i_orig**2
+    #     expected_per_coef = mu_r_orig**2 + mu_i_orig**2 + var_r + var_i  # (n_grid, ncoef)
+
+    #     total_expected_power = np.sum(weight * expected_per_coef, axis=-1)  # (n_grid,)
+
+    #     # Approximate variance of |c_k|^2 for each coefficient:
+    #     # A commonly used approximation (assuming Gaussian r/i and independence):
+    #     # Var(|c|^2) ≈ 2*(var_r**2 + var_i**2) + 4*(mu_r^2 * var_r + mu_i^2 * var_i)
+    #     var_power_per_coef = 2*(var_r**2 + var_i**2) + 4*(mu_r_orig**2 * var_r + mu_i_orig**2 * var_i)
+
+    #     # Combine (assume coefficients independent)
+    #     total_var_power = np.sum((weight**2) * var_power_per_coef, axis=-1)  # (n_grid,)
+
+    #     # Turn these into per-grid relative uncertainty:
+    #     rel_std_per_grid = np.sqrt(total_var_power) / (total_expected_power + eps)
+
+    #     # Scalar termination metric — choose one:
+    #     # - use a robust statistic (e.g., 90th percentile) instead of mean to reduce fluctuation
+    #     frac_predictive = np.quantile(rel_std_per_grid, 0.9)  # or np.median(...)
+
+    #     # Also return scaled mean/var (averaged over weights)
+    #     scaled_total_mu = total_expected_power / (weight_sum + eps)
+    #     scaled_total_var = total_var_power / ((weight_sum**2) + eps)  # because we used weight**2 in var
+
+    #     return scaled_total_mu, scaled_total_var, x_pred, frac_predictive
         
     def reconstruct(self, f_query_arr):
         """Predict full angle response at new frequency"""

@@ -30,7 +30,7 @@ def set_ynormalizer(train_y, normalize_y: bool):
         y_normalizer   = lambda y: (y - y_stat["mean"]) / ystd # Add epsilon for stability
         y_denormalizer = lambda y: (y * ystd) + y_stat["mean"]
         y_denorm_std   = lambda y: (y * ystd)
-        _y_train_std   = ystd.detach().cpu().numpy().squeeze(0)
+        _y_train_std   = ystd.detach().cpu().numpy()
         # range_y = self.y_stat["max"] - self.y_stat["min"]
         # range_y = torch.clamp(range_y, min=eps)
         # self.y_normalizer   = lambda y: (y - self.y_stat["min"]) / range_y
@@ -118,10 +118,11 @@ class GPModel(gpytorch.models.ExactGP):
                 pred = self.likelihood(self.__call__(x_batch))
             preds.append(pred)
         ypred = torch.cat([self.y_denormalizer(p.mean) for p in preds])
-        prediction = [ypred.detach().cpu().numpy().squeeze(0)]
+        prediction = [ypred.detach().cpu().numpy()]
         if return_std:
+            # ystd = torch.cat([p.variance.sqrt() for p in preds])
             ystd = torch.cat([self.y_denorm_std(p.variance.sqrt()) for p in preds])
-            prediction.append(ystd.detach().cpu().numpy().squeeze(0))
+            prediction.append(ystd.detach().cpu().numpy())
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Output shape:", ypred.shape)
         if len(prediction)==1: prediction = prediction[0]
@@ -232,86 +233,87 @@ def train_model_per_restart(
     ).to(device)
 
     train_lr = uniform(0.1, 0.3)
-    pretrain_iter = min(100, training_iter // 4)  # pre-train
+    # # pretrain_iter = training_iter // 4  # pre-train
+    # pretrain_iter = min(100, training_iter // 4)  # pre-train
 
-    # optimizer = torch.optim.Adam(
+    # # optimizer = torch.optim.Adam(
+    # #     model.parameters(), lr=train_lr
+    # # )
+    # optimizer = torch.optim.AdamW(
     #     model.parameters(), lr=train_lr
     # )
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=train_lr
-    )
-    # scheduler = None
+    # # scheduler = None
     # scheduler_class = torch.optim.lr_scheduler.OneCycleLR
     # scheduler = scheduler_class(
     #     optimizer, max_lr=train_lr, 
     #     total_steps=pretrain_iter, 
     #     anneal_strategy="linear"
     # )
-    # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
-    # scheduler = scheduler_class(
-    #     optimizer, eta_min=1e-6, T_max=pretrain_iter//3)
-    # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
-    # scheduler = scheduler_class(
-    #     optimizer, T_0=10, T_mult=1, eta_min=1e-5)
-    # scheduler_class = torch.optim.lr_scheduler.ReduceLROnPlateau
-    # scheduler = scheduler_class(
-    #     optimizer, mode="min", factor=0.5, patience=5, cooldown=3, 
-    #     threshold = 1e-4, threshold_mode = 'rel', min_lr = 1e-6
-    # )
+    # # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
+    # # scheduler = scheduler_class(
+    # #     optimizer, eta_min=1e-6, T_max=pretrain_iter//3)
+    # # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+    # # scheduler = scheduler_class(
+    # #     optimizer, T_0=10, T_mult=1, eta_min=1e-5)
+    # # scheduler_class = torch.optim.lr_scheduler.ReduceLROnPlateau
+    # # scheduler = scheduler_class(
+    # #     optimizer, mode="min", factor=0.5, patience=5, cooldown=3, 
+    # #     threshold = 1e-4, threshold_mode = 'rel', min_lr = 1e-6
+    # # )
 
-    # number of epochs to wait without improvement (Early stop cond)
-    # patience = 20
-    patience = int(pretrain_iter/6)
-    # # patience = 10 * min(10, int(log10(pretrain_iter))) + 5
+    # # number of epochs to wait without improvement (Early stop cond)
+    # # patience = 20
+    # patience = int(pretrain_iter/6)
+    # # # patience = 10 * min(10, int(log10(pretrain_iter))) + 5
 
-    best_loss = float("inf")
-    patience_counter = 0
-    tab = " "*2
-    for i in range(pretrain_iter):
-        optimizer.zero_grad()
-        # with gpytorch.settings.cholesky_jitter(1e-4):
-        output = model(train_x)
-        # print("Shapes during Training:", train_x.shape, output.mean.shape, train_y.shape, )
-        loss = -mll(output, train_y)
+    # best_loss = float("inf")
+    # patience_counter = 0
+    # tab = " "*2
+    # for i in range(pretrain_iter):
+    #     optimizer.zero_grad()
+    #     # with gpytorch.settings.cholesky_jitter(1e-4):
+    #     output = model(train_x)
+    #     # print("Shapes during Training:", train_x.shape, output.mean.shape, train_y.shape, )
+    #     loss = -mll(output, train_y)
 
-        if verbose and (i % 10 == 0 or i == pretrain_iter-1):
-            it = f"({i+1}/{pretrain_iter})"
-            lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
-            cost = f"loss: {loss:.4f}  noise: [{get_noise_bounds()}]"
-            print(f"Training.... {it}{tab}{lr}{tab}{cost}", flush=True, end='\033[K\r')
+    #     if verbose and (i % 10 == 0 or i == pretrain_iter-1):
+    #         it = f"({i+1}/{pretrain_iter})"
+    #         lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
+    #         cost = f"loss: {loss:.4f}  noise: [{get_noise_bounds()}]"
+    #         print(f"Training.... {it}{tab}{lr}{tab}{cost}", flush=True, end='\033[K\r')
 
-        # ---- Early stopping check ----
-        if i > pretrain_iter//3:
-            if loss.item() < best_loss - 1e-6:  # tolerance to avoid floating point noise
-                best_loss = loss.item()
-                patience_counter = 0
-            else:
-                patience_counter += 1
+    #     # ---- Early stopping check ----
+    #     if i > pretrain_iter//3:
+    #         if loss.item() < best_loss - 1e-6:  # tolerance to avoid floating point noise
+    #             best_loss = loss.item()
+    #             patience_counter = 0
+    #         else:
+    #             patience_counter += 1
 
-            if patience_counter >= patience:
-                if verbose:
-                    it = f"({i+1}/{pretrain_iter})"
-                    # lr = f"LR: {scheduler.get_last_lr()[0]:.4f}"
-                    lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
-                    best_cost = f"loss: {best_loss:.4f}  noise: [{get_noise_bounds()}]"
-                    end_phrase = f"..EarlyStop! {it}{tab}{lr}{tab}{best_cost}"
-                    print(end_phrase, flush=True, end='\033[K\r')
-                break
-        # ---- Early stopping check ----
+    #         if patience_counter >= patience:
+    #             if verbose:
+    #                 it = f"({i+1}/{pretrain_iter})"
+    #                 lr = f"LR: {scheduler.get_last_lr()[0]:.4f}"
+    #                 # lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
+    #                 best_cost = f"loss: {best_loss:.4f}  noise: [{get_noise_bounds()}]"
+    #                 end_phrase = f"..EarlyStop! {it}{tab}{lr}{tab}{best_cost}"
+    #                 print(end_phrase, flush=True, end='\033[K\r')
+    #             break
+    #     # ---- Early stopping check ----
 
-        loss.backward()
-        # clip_grad_norm_(model.parameters(), max_norm=2.0)
-        optimizer.step()
-        # scheduler.step()
-        # scheduler.step(loss.item())     # for ReduceLROnPlateau
+    #     loss.backward()
+    #     # clip_grad_norm_(model.parameters(), max_norm=2.0)
+    #     optimizer.step()
+    #     scheduler.step()
+    #     # scheduler.step(loss.item())     # for ReduceLROnPlateau
 
-    if verbose and patience_counter < patience:
-        it = f"({i+1}/{pretrain_iter})"
-        # lr = f"LR: {scheduler.get_last_lr()[0]:.4f}"
-        lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
-        cost = f"loss: {loss:.4f}{tab}noise: [{get_noise_bounds()}]"
-        end_phrase = f".....Finish! {it}{tab}{lr}{tab}{cost}"
-        print(end_phrase, flush=True, end='\033[K\r')
+    # if verbose and patience_counter < patience:
+    #     it = f"({i+1}/{pretrain_iter})"
+    #     # lr = f"LR: {scheduler.get_last_lr()[0]:.4f}"
+    #     lr = f"LR: {optimizer.param_groups[0]['lr']:.4f}"
+    #     cost = f"loss: {loss:.4f}{tab}noise: [{get_noise_bounds()}]"
+    #     end_phrase = f".....Finish! {it}{tab}{lr}{tab}{cost}"
+    #     print(end_phrase, flush=True, end='\033[K\r')
 
     # ------- Fine-tuning ------- 
     fine_tuning_iter = training_iter
@@ -319,7 +321,7 @@ def train_model_per_restart(
     # fine_tuning_iter = training_iter - i + 21
     # fine_tuning_lr   = 2*scheduler.get_last_lr()[0]    # 2*last_lr
     fine_tuning_lr   = train_lr
-    # end_phrase, tab = f"Training.... ", " "*2
+    end_phrase, tab = f"Training.... ", " "*2
     # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
     finetuner = torch.optim.LBFGS(
         model.parameters(), lr=fine_tuning_lr, 
@@ -340,7 +342,7 @@ def train_model_per_restart(
             print(
                 end_phrase, 
                 f"LBFGS loss: {loss_stdout}", 
-                # f"LBFGS noise: [{get_noise_bounds()}]", 
+                f"LBFGS noise: [{get_noise_bounds()}]", 
                 sep=tab, flush=True, end='\033[K\r')
         return fine_tuned_loss
     with torch.no_grad():

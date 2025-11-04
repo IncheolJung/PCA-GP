@@ -96,7 +96,9 @@ class GPModel(gpytorch.models.ExactGP):
         gc.collect()
         torch.cuda.empty_cache()
         self.eval()
+        self.to(device)
         self.likelihood.eval()
+        self.likelihood.to(device)
         # with torch.no_grad(), gpytorch.settings.fast_pred_var(), warnings.catch_warnings():
         #     # The forward pass will handle reshaping the prediction data
         #     warnings.simplefilter("ignore", GPInputWarning)
@@ -109,7 +111,7 @@ class GPModel(gpytorch.models.ExactGP):
         #     prediction.append(ystd.detach().cpu().numpy())
         preds = []
         for i in range(0, x.size(0), batch_size):
-            x_batch = x[i:i + batch_size]
+            x_batch = x[i:i + batch_size].to(device)
             with torch.no_grad(), gpytorch.settings.fast_pred_var(False), warnings.catch_warnings():
                 warnings.simplefilter("ignore", GPInputWarning)
                 # pred = self.__call__(x_batch)
@@ -138,8 +140,8 @@ def build_model(
         # ).double().to(device)
         likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
             # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
-            # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
-            noise_prior=gpytorch.priors.LogNormalPrior(-20.0, 0.3),
+            noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-9.0, 0.5),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
             num_tasks=train_y.shape[-1],
         ).double().to(device)
@@ -152,8 +154,8 @@ def build_model(
     else:
         likelihood = gpytorch.likelihoods.GaussianLikelihood(
             # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
-            # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
-            noise_prior=gpytorch.priors.LogNormalPrior(-20.0, 0.3),
+            noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
+            # noise_prior=gpytorch.priors.LogNormalPrior(-9.0, 0.5),
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
         ).double().to(device)
         # likelihood.noise_covar.initialize(noise=lower_bound)
@@ -225,14 +227,22 @@ def train_model_per_restart(
         likelihood, model
     ).to(device)
 
-    train_lr = uniform(0.05, 0.3)
+    train_lr = uniform(0.2, 0.5)
+    training_iter //= 2  # Adam_iter + LBFGS_iter = training_iter
 
-    optimizer = torch.optim.Adam(
+    # optimizer = torch.optim.Adam(
+    #     model.parameters(), lr=train_lr, weight_decay=1e-6
+    # )
+    optimizer = torch.optim.AdamW(
         model.parameters(), lr=train_lr, weight_decay=1e-6
     )
     # scheduler = None
     scheduler_class = torch.optim.lr_scheduler.OneCycleLR
-    scheduler = scheduler_class(optimizer, max_lr=train_lr, total_steps=training_iter, anneal_strategy="linear")
+    scheduler = scheduler_class(
+        optimizer, max_lr=train_lr, 
+        total_steps=training_iter, 
+        anneal_strategy="linear"
+    )
     # scheduler_class = torch.optim.lr_scheduler.CosineAnnealingLR
     # scheduler = scheduler_class(
     #     optimizer, eta_min=1e-6, T_max=training_iter//3)
@@ -301,16 +311,17 @@ def train_model_per_restart(
 
     # ------- Fine-tuning ------- 
     # fine_tuning_iter = training_iter
-    fine_tuning_iter = max(50, training_iter // 10)
+    fine_tuning_iter = max(100, training_iter // 4)
     # fine_tuning_iter = training_iter - i + 21
     # fine_tuning_lr   = 2*scheduler.get_last_lr()[0]    # 2*last_lr
-    fine_tuning_lr   = .5 * train_lr
+    fine_tuning_lr   = .3*train_lr
     # end_phrase, tab = f"Training.... ", " "*2
     # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
     finetuner = torch.optim.LBFGS(
         model.parameters(), lr=fine_tuning_lr, 
         max_iter=fine_tuning_iter,
-        history_size=10, line_search_fn="strong_wolfe"
+        history_size=10, 
+        line_search_fn="strong_wolfe"
         )
     fine_tuned_loss = None
     def closure():
@@ -323,7 +334,10 @@ def train_model_per_restart(
         if verbose:
             if fine_tuned_loss.item()>1e3: loss_stdout = f"{fine_tuned_loss.item():.4e}"
             else: loss_stdout = f"{fine_tuned_loss.item():.4f}"
-            print(end_phrase, f"LBFGS loss: {loss_stdout}", 
+            print(
+                end_phrase, 
+                f"LBFGS noise: [{get_noise_bounds()}]", 
+                f"LBFGS loss: {loss_stdout}", 
                 sep=tab, flush=True, end='\033[K\r')
         return fine_tuned_loss
     with torch.no_grad():

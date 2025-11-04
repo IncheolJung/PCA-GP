@@ -4,12 +4,16 @@
 
     \column{0.5\linewidth}
     \begin{figure}
-      \includegraphics[width=\linewidth]{example-image}
+      % \includegraphics[width=\linewidth]{example-image}
+      \includegraphics[width=.95\linewidth]{PCA-GP/fig.pdf}
     \end{figure}
 
     \column{0.5\linewidth}
     \begin{itemize}
-      \item Data of interest is 2D: [frequency, input angle]
+      \item Data of interest is 2D: [frequency, input angle].
+      \item Direct prediction of the dataset is expensive and ineffective.
+      \item PCA is employed to reduce the dataset, where the GPR model predicts the coefficient $\mathbf{Z'}$.
+      \item This \textbf{Reduced Basis} approach is also incorporated with \textbf{VMAS}, thus minimizing computational load while maintaining accuracy.
     \end{itemize}
   
   \end{columns}
@@ -23,7 +27,8 @@
 
     \column{.6\linewidth}
     \begin{figure}
-      \includegraphics[width=\linewidth]{example-image}
+      % \includegraphics[width=\linewidth]{example-image}
+      \includegraphics[width=\linewidth]{demo1/PRIME/isometric.png}
     \end{figure}
 
     \column{.4\linewidth}
@@ -55,7 +60,8 @@
 
     \column{.6\linewidth}
     \begin{figure}
-      \includegraphics[width=\linewidth]{example-image}
+      % \includegraphics[width=\linewidth]{example-image}
+      \includegraphics[width=.6\linewidth]{demo2/circylinder/isometric.png}
     \end{figure}
 
     \column{.4\linewidth}
@@ -68,5 +74,14 @@
     \end{tabular}
 
   \end{columns}
+  
+\end{frame}
+
+
+\begin{frame} {Demonstration 2: on-fly simulation on a composite rounded cylinder}
+
+  \begin{figure}
+    \includegraphics[width=.7\linewidth]{example-image}
+  \end{figure}
   
 \end{frame}

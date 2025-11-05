@@ -13,8 +13,8 @@ import gc
 #     rank = int(os.environ.get('OMPI_COMM_WORLD_RANK', 0))
 #     torch.cuda.set_device(rank % torch.cuda.device_count())
 # except ValueError as e: print(e)
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cpu'
     
 
 def set_ynormalizer(train_y, normalize_y: bool):
@@ -31,6 +31,7 @@ def set_ynormalizer(train_y, normalize_y: bool):
         y_denormalizer = lambda y: (y * ystd) + y_stat["mean"]
         y_denorm_std   = lambda y: (y * ystd)
         _y_train_std   = ystd.detach().cpu().numpy()
+        if _y_train_std.shape[0]==1: _y_train_std = _y_train_std.squeeze(0)
         # range_y = self.y_stat["max"] - self.y_stat["min"]
         # range_y = torch.clamp(range_y, min=eps)
         # self.y_normalizer   = lambda y: (y - self.y_stat["min"]) / range_y
@@ -125,6 +126,7 @@ class GPModel(gpytorch.models.ExactGP):
             prediction.append(ystd.detach().cpu().numpy())
         # print(f"Report from gp_Kenny.GPModel.predict")
         # print("Output shape:", ypred.shape)
+        if ypred.shape[0]==1: prediction = [p.squeeze(0) for p in prediction]
         if len(prediction)==1: prediction = prediction[0]
         return prediction
     
@@ -144,8 +146,8 @@ def build_model(
         likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
             # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
             # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
-            # noise_prior=gpytorch.priors.LogNormalPrior(-9.0, 0.5),
-            noise_prior=gpytorch.priors.SmoothedBoxPrior(*noise_bound), 
+            noise_prior=gpytorch.priors.LogNormalPrior(-13.8, 1.0),
+            # noise_prior=gpytorch.priors.SmoothedBoxPrior(*noise_bound), 
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound),
             num_tasks=train_y.shape[-1],
         ).double().to(device)
@@ -159,8 +161,8 @@ def build_model(
         likelihood = gpytorch.likelihoods.GaussianLikelihood(
             # noise_prior=gpytorch.priors.GammaPrior(concentration=1.1, rate=200.0),
             # noise_prior=gpytorch.priors.LogNormalPrior(-6.9, 1.5),
-            # noise_prior=gpytorch.priors.LogNormalPrior(-9.0, 0.5),
-            noise_prior=gpytorch.priors.SmoothedBoxPrior(*noise_bound), 
+            noise_prior=gpytorch.priors.LogNormalPrior(-13.8, 1.0),
+            # noise_prior=gpytorch.priors.SmoothedBoxPrior(*noise_bound), 
             noise_constraint=gpytorch.constraints.GreaterThan(lower_bound)
         ).double().to(device)
         # likelihood.noise_covar.initialize(noise=lower_bound)
@@ -232,9 +234,11 @@ def train_model_per_restart(
         likelihood, model
     ).to(device)
 
-    train_lr = uniform(0.1, 0.3)
-    # # pretrain_iter = training_iter // 4  # pre-train
-    # pretrain_iter = min(100, training_iter // 4)  # pre-train
+    train_lr = 5*(10**uniform(-2.5, -1.5))
+    # train_lr = uniform(0.2, 0.6)
+    # pretrain_iter = training_iter  # main-train
+    # # pretrain_iter = int(training_iter * 3/4)  # pre-train
+    # # pretrain_iter = min(100, training_iter // 4)  # pre-train
 
     # # optimizer = torch.optim.Adam(
     # #     model.parameters(), lr=train_lr
@@ -263,7 +267,7 @@ def train_model_per_restart(
 
     # # number of epochs to wait without improvement (Early stop cond)
     # # patience = 20
-    # patience = int(pretrain_iter/6)
+    # patience = min(int(pretrain_iter/6), 30)
     # # # patience = 10 * min(10, int(log10(pretrain_iter))) + 5
 
     # best_loss = float("inf")
@@ -317,39 +321,47 @@ def train_model_per_restart(
 
     # ------- Fine-tuning ------- 
     fine_tuning_iter = training_iter
+    # fine_tuning_iter = int(training_iter * 3/4)  # pre-train
     # fine_tuning_iter = max(100, training_iter // 4)
     # fine_tuning_iter = training_iter - i + 21
     # fine_tuning_lr   = 2*scheduler.get_last_lr()[0]    # 2*last_lr
     fine_tuning_lr   = train_lr
     end_phrase, tab = f"Training.... ", " "*2
-    # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
-    finetuner = torch.optim.LBFGS(
-        model.parameters(), lr=fine_tuning_lr, 
-        max_iter=fine_tuning_iter, 
-        history_size=15, 
-        line_search_fn="strong_wolfe"
-    )
-    fine_tuned_loss = None
-    def closure():
-        nonlocal fine_tuned_loss
-        finetuner.zero_grad()
-        output = model(train_x)
-        fine_tuned_loss = -mll(output, train_y)
-        fine_tuned_loss.backward()
-        if verbose:
-            if fine_tuned_loss.item()>1e3: loss_stdout = f"{fine_tuned_loss.item():.4e}"
-            else: loss_stdout = f"{fine_tuned_loss.item():.4f}"
-            print(
-                end_phrase, 
-                f"LBFGS loss: {loss_stdout}", 
-                f"LBFGS noise: [{get_noise_bounds()}]", 
-                sep=tab, flush=True, end='\033[K\r')
-        return fine_tuned_loss
-    with torch.no_grad():
-        loss = finetuner.step(closure).item()
+    # end_phrase, tab = f"Fintuning... ", " "*2
+
+    if fine_tuning_lr > 0:  # run only if EarlyStop
+        # finetuner = torch.optim.Rprop(model.parameters(), lr=fine_tuning_lr)
+        finetuner = torch.optim.LBFGS(
+            model.parameters(), 
+            lr=fine_tuning_lr, 
+            max_iter=fine_tuning_iter, 
+            history_size=10, 
+            line_search_fn="strong_wolfe"
+        )
+        fine_tuned_loss = None
+        def closure():
+            nonlocal fine_tuned_loss
+            finetuner.zero_grad()
+            output = model(train_x)
+            fine_tuned_loss = -mll(output, train_y)
+            fine_tuned_loss.backward()
+            if verbose:
+                if fine_tuned_loss.item()>1e3: loss_stdout = f"{fine_tuned_loss.item():.4e}"
+                else: loss_stdout = f"{fine_tuned_loss.item():.4f}"
+                print(
+                    end_phrase, 
+                    f"LBFGS loss: {loss_stdout}", 
+                    f"LBFGS noise: [{get_noise_bounds()}]", 
+                    sep=tab, flush=True, end='\033[K\r')
+            return fine_tuned_loss
+        # with torch.no_grad():
+        #     loss = finetuner.step(closure).item()
+        with gpytorch.settings.cholesky_jitter(1e-8):
+            finetuner.step(closure)
+        loss = fine_tuned_loss
     # ------- Fine-tuning ------- 
 
-    return model, fine_tuned_loss
+    return model, loss
 
 
 def train_model_per_batch(
@@ -443,8 +455,15 @@ def train_model_gp_Kenny(
     Trains separate GP models for the real and imaginary parts of complex data.
     """
 
-    if train_x.ndim == 1: train_x = train_x[:, None]
-    if train_y.ndim == 1: train_y = train_y[:, None]
+    # if dims != train_x.ndim: 
+    #     # print(dims, train_x.shape)
+    #     if dims>1: train_x = train_x[:, None]
+    #     else:      train_x = train_x.squeeze(-1)
+    # if dims != train_y.ndim: 
+    #     # print(dims, train_y.shape)
+    #     if dims>1: train_y = train_y[:, None]
+    #     else:      train_y = train_y.squeeze(-1)
+    # if train_y.shape[0]==1: train_y = train_y.squeeze(0)
 
     train_x_tensor = torch.tensor(
         train_x, dtype=torch.float64, requires_grad=True

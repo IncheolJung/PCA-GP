@@ -5,7 +5,8 @@
     \column{0.5\linewidth}
     \begin{figure}
       % \includegraphics[width=\linewidth]{example-image}
-      \includegraphics[width=.95\linewidth]{PCA-GP/fig.pdf}
+      \includegraphics[width=.85\linewidth]{PCA-GP/fig.pdf}
+      \caption{PCA to compress prediction target fo GPR}
     \end{figure}
 
     \column{0.5\linewidth}
@@ -28,17 +29,28 @@
     \column{.6\linewidth}
     \begin{figure}
       % \includegraphics[width=\linewidth]{example-image}
-      \includegraphics[width=\linewidth]{demo1/PRIME/isometric.png}
+      \includegraphics[width=\linewidth]{PRIME/isometric.png}
+      \caption{A schematic view of PRIME aircraft}
     \end{figure}
 
     \column{.4\linewidth}
-    \centering
-    \begin{tabular}{r | l}
-      \hline \hline
-      Total \# Freq & 9 \\
-      RMSE & 0.00065 \\
-      \hline \hline
-    \end{tabular}
+    \begin{itemize}
+      \large
+      \itemsep 1em
+      \item $\theta = 90$ DEG
+      \item $\phi \in [0, 180]$ DEG
+      \item $f \in [9.5, 10.5]$ GHz
+      \item Material: PEC
+      \item Final \#$f$: 9
+      \item RMSE: 0.00065
+    \end{itemize}
+    % \centering
+    % \begin{tabular}{r | l}
+    %   \hline \hline
+    %   Total \# Freq & 9 \\
+    %   RMSE & 0.00065 \\
+    %   \hline \hline
+    % \end{tabular}
 
   \end{columns}
   
@@ -49,6 +61,7 @@
 
   \begin{figure}
     \includegraphics[width=\linewidth]{demo1/GP_results_2d.png}
+    \caption{Prediction vs. Ground truth of monostatic farfields on PRIME aircraft}
   \end{figure}
   
 \end{frame}
@@ -58,20 +71,38 @@
 
   \begin{columns}
 
-    \column{.6\linewidth}
+    \column{.5\linewidth}
     \begin{figure}
       % \includegraphics[width=\linewidth]{example-image}
-      \includegraphics[width=.6\linewidth]{demo2/circylinder/isometric.png}
+      \includegraphics[width=.7\linewidth]{circylinder/isometric.png}
+      \caption{A schematic view of a composite rounded cylinder}
     \end{figure}
 
-    \column{.4\linewidth}
-    \centering
-    \begin{tabular}{r | l}
-      \hline \hline
-      Total \# Freq &  \\
-      RMSE &  \\
-      \hline \hline
-    \end{tabular}
+    \column{.5\linewidth}
+    \begin{itemize}
+      \large
+      \itemsep 1ex
+      \item $\theta \in [0, 180]$ DEG
+      \item $\phi = 0$ DEG
+      \item $f \in [100, 500]$ MHz
+      \item Material: Composite
+      \begin{itemize}
+        \large
+        \item top: dielectric
+        \item middle: PEC hollow cylinder
+        \item bottom: IBC
+      \end{itemize}
+      \item \# Unknowns: 13,792
+      \item Final \#$f$: \textbf{\textcolor{red}{N/A}}
+      \item RMSE: \textbf{\textcolor{red}{N/A}}
+    \end{itemize}
+    % \centering
+    % \begin{tabular}{r | l}
+    %   \hline \hline
+    %   Total \# Freq &  \\
+    %   RMSE &  \\
+    %   \hline \hline
+    % \end{tabular}
 
   \end{columns}
   
@@ -81,7 +112,8 @@
 \begin{frame} {Demonstration 2: on-fly simulation on a composite rounded cylinder}
 
   \begin{figure}
-    \includegraphics[width=.7\linewidth]{example-image}
+    \includegraphics[width=.6\linewidth]{example-image}
+    \caption{Prediction vs. Ground truth of monostatic farfields on composite rounded cylinder}
   \end{figure}
   
 \end{frame}

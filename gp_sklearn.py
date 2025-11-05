@@ -58,4 +58,11 @@ def train_gp_sklearn(
         warnings.simplefilter("ignore", ConvergenceWarning)
         gp_r.fit(X, Y.real)
         gp_i.fit(X, Y.imag)
+
+    if verbose:
+        loss_r = -gp_r.log_marginal_likelihood(gp_r.kernel_.theta)
+        loss_i = -gp_i.log_marginal_likelihood(gp_i.kernel_.theta)
+        print(f"Final loss (real): {loss_r:.6f}")
+        print(f"Final loss (imag): {loss_i:.6f}")
+        
     return gp_r, gp_i

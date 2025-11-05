@@ -44,10 +44,12 @@ def parse_args(default_values = None):
     sweeping_types = [
         "phi", "theta"
         ]
+    # print('default_values:')
+    # print(default_values)
     if default_values is None:
         default_values = [
             None, None, ['0', '180', '1'], '0', ["1000", "2000", "1"], 'false', 
-            '0', '1', '3', '1', '3', '0', '20', '1e-3'
+            '0', '1', '3', '1', '3', '0', '20', '1e-3', '0', '0', '0'
         ]
     parser = ArgumentParser()
     parser.add_argument(
@@ -97,6 +99,15 @@ def parse_args(default_values = None):
     parser.add_argument(
         "-T", "--tol", dest="tol", default=default_values[13], 
         help=f"tolerance for varinace. terminates iteration if tol > var")
+    parser.add_argument(
+        "--solver", default='0', 
+        help=f"GP solver type")
+    parser.add_argument(
+        "--trainer", default='0', 
+        help=f"GP trainer type")
+    parser.add_argument(
+        "--gp", "--gp-model", default='0', 
+        help=f"GP model type")
     return parser.parse_args()
 
 
@@ -136,6 +147,7 @@ def write_config(filename, config: dict):
         config_keys = [k for k in config_keys if k!='']
         if len(config_keys) != len(config_values): 
             if usempi: prefix=f"[Rank {rank}]" 
+            else: prefix=""
             print(prefix, filename, 
                   'is corrupted: len(config_keys) != len(config_values)\n ' 
                   'Will attempt to extend the shorter list to write config file. ' 
@@ -158,6 +170,8 @@ def get_configuration():
         ### Read config from file ###
         try:
             config_sim_from_file = read_config(config_sim_filename)
+            # print('config_sim_from_file:')
+            # print(config_sim_from_file)
             if not config_sim_from_file or len(config_sim_from_file) != num_config_sim:
                 raise FileNotFoundError
         except FileNotFoundError:
@@ -167,10 +181,15 @@ def get_configuration():
             ]
         try:
             config_gp_from_file = read_config(config_gp_filename)
+            # print('config_gp_from_file:')
+            # print(config_gp_from_file)
             if not config_gp_from_file or len(config_sim_from_file) != num_config_gp:
                 raise FileNotFoundError
         except FileNotFoundError:
-            config_gp_from_file = ['0', '1', '3', '1', '3', '0', '20', '1e-3']
+            config_gp_from_file = [
+                '0', '1', '3', '1', '3', '0', '20', '1e-3', 
+                # '0', '0', '0'
+            ]
         ### Read config from args ###
         config_defaults = [*config_sim_from_file, *config_gp_from_file]
         if len(config_defaults) != num_config_sim + num_config_gp:
@@ -191,7 +210,8 @@ def get_configuration():
         'Number of Initial Samples', 'Sampling Addition per Iteration',
         'Number of Terms (LF-NSM Kernel Parameter)',
         'Sampling Strategy (0: grid, 1: latin-hypercube)',
-        'Maximum Iteration for Gaussian Process', 'Prediction Energy Tolerance'
+        'Maximum Iteration for Gaussian Process', 'Prediction Energy Tolerance',
+        # 'Solver Type', 'Trainer Type', 'GP Model Type'
     ]
     num_config_sim, num_config_gp = len(config_sim_key), len(config_gp_key)
     config_sim_filename = 'config_simulation.cfg'
@@ -213,7 +233,11 @@ def get_configuration():
         config = Namespace(**config)
     else:
         config = parse_args(config_defaults)
-    def parse_and_write_config(config):
+    def parse_and_write_config(config_):
+        config = deepcopy(config_)
+        for key in ['solver', 'trainer', 'gp']:  # strictly arguments
+            if hasattr(config, key):
+                delattr(config, key)
         ### Write config to file ###
         config_values = list(vars(config).values())
         config_sim_values, config_gp_values = config_values[:num_config_sim], config_values[num_config_sim:]
@@ -222,7 +246,9 @@ def get_configuration():
             v_is_list_str = isinstance(v, str) and v.strip(' ').strip('\t').startswith('[')
             if v_is_iterable or v_is_list_str:
                 config_sim_values[i] = ' '.join(list(map(str, v)))
-        assert(num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values))
+        cerr = f"Invalid config: {num_config_sim}=={len(config_sim_values)} && {num_config_gp}=={len(config_gp_values)}"
+        assert num_config_sim==len(config_sim_values) and num_config_gp==len(config_gp_values), cerr
+        
         config_sim_dict = {f"### {k} ###":v for k,v in zip(config_sim_key, config_sim_values)}
         config_gp_dict = {f"### {k} ###":v for k,v in zip(config_gp_key, config_gp_values)}
         write_config(config_sim_filename, config_sim_dict)
@@ -381,6 +407,23 @@ def main():
     sweep_type_candidate = [
         "phi", "theta"
         ]
+    solver_type = int(config.solver)
+    solver_type_candidate = [
+        "On-Fly-VWT-IE-Solver",
+        "Pre-computed-PRIME (HH)",
+        "Pre-computed-PRIME (VV)",
+    ]
+    gp_trainer_type = int(config.trainer)
+    gp_trainer_type_candidate = [
+        "Scikit-learn", "tinyGP",
+        "gpytorch", "gpytorch-2"
+    ]
+    gp_model_type = int(config.gp)
+    gp_model_type_candidate = [
+        "ReducedBasisGP1D",
+        "ReducedBasisGP2D",
+        "ReducedBasisGPMultiTask"
+    ]
     n_init = int(config.n)
     terms  = int(config.t)
     max_iter = int(config.i)
@@ -398,19 +441,42 @@ def main():
     # SOLVER
     # -----------------------
 
-    solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
-    # solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
+    if solver_type==1:
+        workingpath = "./data/data-for-kenny-paper-HH.npz"
+        solver = fileIOdatareader("data/data-for-kenny-paper-HH.npz")
+    elif solver_type==2:
+        workingpath = "./data/data-for-kenny-paper-VV.npz"
+        solver = fileIOdatareader("data/data-for-kenny-paper-VV.npz")
+    
+    elif solver_type==0:
+        workingpath = config.path
+        if workingpath is None:
+            workingpath = "./data/VWT-data/circylinder"
+            if (not usempi) or (usempi and rank==0):
+                print(
+                    "\n"*2, "#"*50, '\n', 
+                    "WORKING_PATH not supplied. ", '\n',
+                    "Fall back to default:", workingpath, '\n', 
+                    "#"*50, "\n"*2,
+                    )
 
-    workingpath = config.path
-    if workingpath is None:
-        workingpath = "./data/VWT-data/circylinder"
-        if (not usempi) or (usempi and rank==0):
-            print(
-                "\n"*2, "#"*50, '\n', 
-                "WORKING_PATH not supplied. ", '\n',
-                "Fall back to default:", workingpath, '\n', 
-                "#"*50, "\n"*2,
-                )
+        solver = OnFlySolver(
+            workingpath=workingpath,
+            model_name=config.model,
+            angles=angles, 
+            sweep_angle_type=sweep_type,
+            usempi=usempi, mpicomm=comm
+            )
+                
+        config.path = solver.workingpath
+        config.model = solver.model_name
+        parse_and_write_config(config)
+        # raise Exception
+    
+    else:
+        raise RuntimeError(
+            'Invalid config.solver: {}'.format(solver_type)
+        )
 
     # solver = OnFlySolver(
     #     workingpath="./data/VWT-data/sphere",
@@ -431,19 +497,6 @@ def main():
     #     sweep_angle_type=1
     #     )
 
-    # solver = OnFlySolver(
-    #     workingpath=workingpath,
-    #     model_name=config.model,
-    #     angles=angles, 
-    #     sweep_angle_type=sweep_type,
-    #     usempi=usempi, mpicomm=comm
-    #     )
-            
-    # config.path = solver.workingpath
-    # config.model = solver.model_name
-    # parse_and_write_config(config)
-    # raise Exception
-
     # solver = OnFlySolverMyMoM(
     #     workingpath="./data/MoM-data/spiral-theta90",
     #     model_name="test", usempi=usempi
@@ -454,16 +507,32 @@ def main():
     # -----------------------
     # GP TRAINER
     # -----------------------
-    # from gp_sklearn import train_gp_sklearn as trainer
-    from gp_Kenny import train_model_gp_Kenny as trainer
-    # from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
+    if gp_trainer_type==0:
+        from gp_sklearn import train_gp_sklearn as trainer
+    elif gp_trainer_type==1:
+        from gp_tinyGP_jit_opt import train_gp_tinygp as trainer
+    elif gp_trainer_type==2:
+        from gp_Kenny import train_model_gp_Kenny as trainer
+    elif gp_trainer_type==3:
+        from gp_Kenny_from_mode import train_model_gp_Kenny_from_mode as trainer
+    else:
+        raise RuntimeError(
+            'Invalid config.trainer: {}'.format(gp_trainer_type)
+        )
 
     # -----------------------
     # GP MODEL
     # -----------------------
-    # model = ReducedBasisGP1D
-    # model = ReducedBasisGP2D
-    model = ReducedBasisGPMultiTask
+    if gp_model_type==0:
+        model = ReducedBasisGP1D
+    elif gp_model_type==1:
+        model = ReducedBasisGP2D
+    elif gp_model_type==2:
+        model = ReducedBasisGPMultiTask
+    else:
+        raise RuntimeError(
+            'Invalid config.gp: {}'.format(gp_model_type)
+        )
 
     # -----------------------
     # OUTPUT DRIECTORY SETUP
@@ -484,18 +553,24 @@ def main():
         print(f"  >> terms: {terms}")
         print(f"  >> max_iter: {max_iter}")
         print(f"  >> tol: {tol}")
-        print(f"  >> frequency: [start, end, step] = {f_min, f_max, f_step}")
-        print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, step] = {a_min, a_max, a_step}")
+        print(f"  >> frequency: [start, end, step] = {[f_min, f_max, f_step]}")
+        print(f"  >> angles {sweep_type_candidate[sweep_type]}: [start, end, step] = {[a_min, a_max, a_step]}")
+        print(f"  >> Solver: {solver_type_candidate[solver_type]}")
+        print(f"  >> GP Trainer: {gp_trainer_type_candidate[gp_trainer_type]}")
+        print(f"  >> GP Model: {gp_model_type_candidate[gp_model_type]}")
         print(f"\n ======  Simulation {simulation_number} Initialized  ====== \n")
         stdout.flush()
+
     # -----------------------
     # BEGIN
     # -----------------------
+
     # f_min, f_max, f_num = 100, 300, 101
     # f_min, f_max, f_num = 9500, 10500, 101
     # f_min, f_max, f_num = 500, 1500, 151
     # angles = np.linspace(0, 180, 181)  # 181 angles
     # angles = np.linspace(0, 180, 19)
+
     rbgp = model(
         solver, trainer, angles, n_init=n_init, r=n_init, adaptive_r=adaptive_basis, 
         acquisition_type=acquisition_function, 
@@ -535,6 +610,10 @@ def main():
         if break_token: break
 
         rbgp.update(f_next)
+
+    # -----------------------
+    # END STAGE (Export & Validate)
+    # -----------------------
     
     if (not usempi) or (usempi and rank==0):
         try: max_ac = max(ac_fx)

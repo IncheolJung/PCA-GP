@@ -1,0 +1,182 @@
+
+ ======  Simulation 58 Initialized  ====== 
+
+  >> Simulation path: ./data/VWT-data/prime-phi
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> Sampling strategy: grid
+  >> n_init: 4
+  >> terms: 5
+  >> max_iter: 50
+  >> tol: 0.005
+  >> angles phi: [start, end, step] = (0.0, 180.0, 1.0)
+
+ ======  Simulation 58 Initialized  ====== 
+
+number of basis updated: 4 -> 4
+S[0, r-1] =  0.24911214212214441 0.1175545753693318
+
+  >> Initial Frequencies: ['10000.0', '11666.667', '13333.333', '15000.0']
+
+
+Iteration 1 / 50: max_acquisition 0.0050502054 | pred_to_total_POD_energy_ratio 1.1493936205
+number of frequency samples: 4
+sampling new frequencies: [ 12500.000 ]
+number of basis updated: 4 -> 5
+S[0, r-1] =  0.28694426738520856 0.07750419615477487
+
+Iteration 2 / 50: max_acquisition 0.0031048039 | pred_to_total_POD_energy_ratio 0.6662062591
+number of frequency samples: 5
+sampling new frequencies: [ 14250.000 ]
+number of basis updated: 5 -> 6
+S[0, r-1] =  0.31462896247366 0.06406394223435002
+
+Iteration 3 / 50: max_acquisition 0.0021145532 | pred_to_total_POD_energy_ratio 0.5717241178
+number of frequency samples: 6
+sampling new frequencies: [ 10500.000 ]
+number of basis updated: 6 -> 7
+S[0, r-1] =  0.331915237592136 0.06300213776106568
+
+Iteration 4 / 50: max_acquisition 0.0004621482 | pred_to_total_POD_energy_ratio 0.1830093630
+number of frequency samples: 7
+sampling new frequencies: [ 11200.000 ]
+number of basis updated: 7 -> 8
+S[0, r-1] =  0.35482012727759166 0.059404743592354
+
+Iteration 5 / 50: max_acquisition 0.0002129650 | pred_to_total_POD_energy_ratio 0.1377093162
+number of frequency samples: 8
+sampling new frequencies: [ 13800.000 ]
+number of basis updated: 8 -> 9
+S[0, r-1] =  0.3786806177046523 0.05917606340958628
+
+Iteration 6 / 50: max_acquisition 0.0002424522 | pred_to_total_POD_energy_ratio 0.1367013892
+number of frequency samples: 9
+sampling new frequencies: [ 14400.000 ]
+number of basis updated: 9 -> 10
+S[0, r-1] =  0.4068669283559592 0.029352601804950893
+
+Iteration 7 / 50: max_acquisition 0.0001255400 | pred_to_total_POD_energy_ratio 0.0825034973
+number of frequency samples: 10
+sampling new frequencies: [ 10850.000 ]
+number of basis updated: 10 -> 11
+S[0, r-1] =  0.4247755307858331 0.02784999226048588
+
+Iteration 8 / 50: max_acquisition 0.0001586718 | pred_to_total_POD_energy_ratio 0.1054171468
+number of frequency samples: 11
+sampling new frequencies: [ 12100.000 ]
+number of basis updated: 11 -> 12
+S[0, r-1] =  0.4329853504554382 0.02659390681675836
+
+Iteration 9 / 50: max_acquisition 0.0001877070 | pred_to_total_POD_energy_ratio 0.1822504654
+number of frequency samples: 12
+sampling new frequencies: [ 10300.000 ]
+number of basis updated: 12 -> 13
+S[0, r-1] =  0.45584175671722305 0.023215854024674423
+
+Iteration 10 / 50: max_acquisition 0.0001623765 | pred_to_total_POD_energy_ratio 0.1083435938
+number of frequency samples: 13
+sampling new frequencies: [ 12950.000 ]
+number of basis updated: 13 -> 14
+S[0, r-1] =  0.46581287730639354 0.0215119556648324
+
+Iteration 11 / 50: max_acquisition 0.0001277917 | pred_to_total_POD_energy_ratio 0.1322020359
+number of frequency samples: 14
+sampling new frequencies: [ 14800.000 ]
+number of basis updated: 14 -> 15
+S[0, r-1] =  0.48294975010773866 0.020420819544648392
+
+Iteration 12 / 50: max_acquisition 0.0000925496 | pred_to_total_POD_energy_ratio 0.1020257615
+number of frequency samples: 15
+sampling new frequencies: [ 13550.000 ]
+number of basis updated: 15 -> 16
+S[0, r-1] =  0.503391091788919 0.018713583836752166
+
+Iteration 13 / 50: max_acquisition 0.0001212810 | pred_to_total_POD_energy_ratio 0.1455512401
+number of frequency samples: 16
+sampling new frequencies: [ 11850.000 ]
+number of basis updated: 16 -> 17
+S[0, r-1] =  0.5118908136806798 0.016170143163279915
+
+Iteration 14 / 50: max_acquisition 0.0001119342 | pred_to_total_POD_energy_ratio 0.1226511367
+number of frequency samples: 17
+sampling new frequencies: [ 14000.000 ]
+number of basis updated: 17 -> 18
+S[0, r-1] =  0.5348092044344557 0.011186226992158444
+
+Iteration 15 / 50: max_acquisition 0.0000995647 | pred_to_total_POD_energy_ratio 0.1001590888
+number of frequency samples: 18
+sampling new frequencies: [ 12700.000 ]
+number of basis updated: 18 -> 19
+S[0, r-1] =  0.550354387230621 0.006994563137105015
+
+Iteration 16 / 50: max_acquisition 0.0000813810 | pred_to_total_POD_energy_ratio 0.1097323143
+number of frequency samples: 19
+sampling new frequencies: [ 14650.000 ]
+number of basis updated: 19 -> 20
+S[0, r-1] =  0.566427076964755 0.0032923352135518016
+
+Iteration 17 / 50: max_acquisition 0.0000648136 | pred_to_total_POD_energy_ratio 0.0648537207
+number of frequency samples: 20
+sampling new frequencies: [ 11400.000 ]
+number of basis updated: 20 -> 21
+S[0, r-1] =  0.5742207491033077 0.0024177116125957566
+
+Iteration 18 / 50: max_acquisition 0.0000430769 | pred_to_total_POD_energy_ratio 0.0502412635
+number of frequency samples: 21
+sampling new frequencies: [ 11000.000 ]
+number of basis updated: 21 -> 22
+S[0, r-1] =  0.5855771013849058 0.0019606178026613116
+
+Iteration 19 / 50: max_acquisition 0.0000367532 | pred_to_total_POD_energy_ratio 0.0517605787
+number of frequency samples: 22
+sampling new frequencies: [ 13100.000 ]
+number of basis updated: 22 -> 23
+S[0, r-1] =  0.6002083934808009 0.0014988959121074715
+
+Iteration 20 / 50: max_acquisition 0.0000257075 | pred_to_total_POD_energy_ratio 0.0415361294
+number of frequency samples: 23
+sampling new frequencies: [ 12250.000 ]
+number of basis updated: 23 -> 24
+S[0, r-1] =  0.6117525999281971 0.001141612443281882
+
+Iteration 21 / 50: max_acquisition 0.0000210634 | pred_to_total_POD_energy_ratio 0.0272348425
+number of frequency samples: 24
+sampling new frequencies: [ 10150.000 ]
+number of basis updated: 24 -> 25
+S[0, r-1] =  0.61941107198426 0.0007059225881228786
+
+Iteration 22 / 50: max_acquisition 0.0000205082 | pred_to_total_POD_energy_ratio 0.0329114513
+number of frequency samples: 25
+sampling new frequencies: [ 10600.000 ]
+number of basis updated: 25 -> 26
+S[0, r-1] =  0.6318435202341746 0.00032860128295874463
+
+Iteration 23 / 50: max_acquisition 0.0000166501 | pred_to_total_POD_energy_ratio 0.0244852450
+number of frequency samples: 26
+sampling new frequencies: [ 14100.000 ]
+number of basis updated: 26 -> 27
+S[0, r-1] =  0.6478536436078611 0.0002901187602635908
+
+Iteration 24 / 50: max_acquisition 0.0000157091 | pred_to_total_POD_energy_ratio 0.0267107252
+number of frequency samples: 27
+sampling new frequencies: [ 11550.000 ]
+number of basis updated: 27 -> 28
+S[0, r-1] =  0.6577324174137208 0.0002775204180547935
+
+Iteration 25 / 50: max_acquisition 0.0000043715 | pred_to_total_POD_energy_ratio 0.0044112388
+number of frequency samples: 28
+sampling new frequencies: [ 13650.000 ]
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	25	/	50
+  >> Final acquisition:	4.371460317117044e-06
+  >> Final pred_to_total_POD_energy_ratio:	0.004411238783184991
+  >> total n_freq:	28
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE:0.000994071329
+Error scale: dB

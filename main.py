@@ -156,9 +156,9 @@ def write_config(filename, config: dict):
                   'The user is encouraged to check the configuration file afterwards.' 
             ) 
             if len(config_keys) > len(config_values): 
-                config_values.extend(['']*(len(config_keys) - len(config_values))) 
+                config_values.extend([['']]*(len(config_keys) - len(config_values))) 
             if len(config_keys) < len(config_values): 
-                config_keys.extend(['']*(len(config_values) - len(config_keys)))
+                config_keys.extend([['']]*(len(config_values) - len(config_keys)))
         config = {k:v for k,v in zip(config_keys, config_values)}
     data = '\n'.join(['\n'.join([f"{k}", f"{v}"]) for k,v in config.items()])
     open(filename, 'w').write(data+'\n')

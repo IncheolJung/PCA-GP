@@ -7,6 +7,8 @@ from itertools import product
 from datareader import *
 from ReducedBasisGP import *
 
+from time import time
+
 try:
     from libmpi.libmpi import *
     if size==1:
@@ -384,6 +386,8 @@ def export(file_path, np_data, freqs, theta, phi):
 
 
 def main():
+    if (not usempi) or (usempi and rank==0):
+        ts = time()
     config, parse_and_write_config = get_configuration()
     # -----------------------
     # CONFIG
@@ -614,6 +618,8 @@ def main():
     # -----------------------
     # END STAGE (Export & Validate)
     # -----------------------
+    if (not usempi) or (usempi and rank==0):
+        tf = time()
     
     if (not usempi) or (usempi and rank==0):
         try: max_ac = max(ac_fx)
@@ -623,6 +629,7 @@ def main():
         print("  >> Final acquisition:", max_ac, sep="\t")
         print("  >> Final pred_to_total_POD_energy_ratio:", POD_energy, sep="\t")
         print("  >> total n_freq:", len(rbgp.freqs), sep="\t")
+        print("  >> total training time:", tf-ts, "s", sep="\t")
         stdout.flush()
 
         f_export = freqs
@@ -651,4 +658,7 @@ def main():
 
 
 if __name__ == "__main__":
+    ts = time()
     main()
+    tf = time()
+    print(f"Total Compute Time: {tf-ts} s")

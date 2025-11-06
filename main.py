@@ -661,4 +661,5 @@ if __name__ == "__main__":
     ts = time()
     main()
     tf = time()
-    print(f"Total Compute Time: {tf-ts} s")
+    if (not usempi) or (usempi and rank==0):
+        print(f"Total Compute Time: {tf-ts} s")

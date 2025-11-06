@@ -1,0 +1,62 @@
+\begin{frame} {Theory: PCA}
+
+  \begin{columns}
+    
+    \column{0.4\linewidth}
+    \begin{figure}
+      % \includegraphics[width=\linewidth]{example-grid-100x100pt}
+      \includegraphics[width=.9\linewidth]{PCA/fig.pdf}
+      \caption{Matrix compression via PCA}
+    \end{figure}
+
+    \column{0.6\linewidth}
+    \begin{itemize}
+      \item PCA is a representative technique for matrix dimension reduction.
+      \item Singular Value Decomposition (SVD) is used for matrix analysis.
+      \[\mathbf{U}_{N \times S} \boldsymbol{\Sigma}_{S \times S} \mathbf{V}^T_{S \times M} = \mathbf{Y}_{N \times M} \]
+      \item $\mathbf{Z} := \mathbf{U} \boldsymbol{\Sigma}$ is defined as coefficients, whereas $\mathbf{V}^T$ functions as \textbf{basis}.
+      \item Based on $\boldsymbol{\Sigma}$, insignificant values are truncated: \[\mathbf{V}' = \mathbf{V}[:k] \quad\text{where, } \boldsymbol{\Sigma}[k] / \boldsymbol{\Sigma}[0] < \epsilon\]
+      \item The matrix is then reconstructed: $\mathbf{Y} = \mathbf{Z}' \mathbf{V}'^T$
+    \end{itemize}
+
+  \end{columns}
+
+\end{frame}
+
+
+\begin{frame} {Theory: GPR}
+
+  \begin{itemize}
+  \item GPR is a widely-used technique for a surrogate modelling.
+  \item For given training set $\mathcal{D} = \{(\mathbf{x}_n, \mathbf{y}_n=f(\mathbf{x}_n))\}^N_{n=1}$, where $f$ refers to an expensive function that we aim to build a surrogate model for, the goal is to predict $\mathbf{y}_* = f(\mathbf{x}_*)$ where $\mathbf{x}_*$ is in testing set.
+  \[\left(\begin{matrix}
+    \mathbf{y} \\ \mathbf{y}_*
+  \end{matrix}\right) \sim \left(\left(\begin{matrix}
+    \boldsymbol\mu \\ \boldsymbol\mu_*
+  \end{matrix}\right), \left(\begin{matrix}
+    \mathbf{K} & \mathbf{K}_* \\ \mathbf{K}^T_* & \mathbf{K}_{**}
+  \end{matrix}\right)\right)\]
+  \item Kernel functions are used to model covariance between sampling points. It is the kernel function parameters that are trained for the given training data.
+  \[k(\mathbf{X}, \mathbf{X}) = \mathbf{K}, \qquad k(\mathbf{X}, \mathbf{X}_*) = \mathbf{K}_*, \qquad k(\mathbf{X}_*, \mathbf{X}_*) = \mathbf{K}_{**}\]
+  \item The conditional posterior mean is analytically known as:
+  \[p(\mathbf{y}_* \mid \mathbf{X}_*, \mathbf{X}, \mathbf{y}) = \mathcal{N}(\hat{\boldsymbol{\mu}_*}, \hat{\mathbf{K}_{**}})\]
+  \[\hat{\boldsymbol{\mu}_*} = \boldsymbol{\mu}(\mathbf{X}_*) + \mathbf{K}^T_*\mathbf{K}^{-1}(\mathbf{y}-\boldsymbol{\mu}(\mathbf{X}))\]
+  \[\hat{\mathbf{K}_{**}} = \mathbf{K}_{**} - \mathbf{K}^T_{*}\mathbf{K}^{-1}\mathbf{K}_{*}\]
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame} {Theory: VMAS}
+
+  \begin{itemize}
+  \item For GPR model to attain high accuracy, the training samples must effectively represent the behavior of the complete data.
+  \item With expensive objective function such as a full-wave solver, samples are demanded to be small yet still highly representative.
+  \item \textbf{Adaptive sampling} is one of the most popular way to enable this: it iteratively selects new samples, gradually revealing the data behavior.
+  \item Considering $K$ number of basis and $\mathrm{Var}_k$ being the variance from $k$th GPR, integrated variance can be calculated as:
+  \[ \mathrm{Var} = \sum_{k=1}^{K} \Sigma_k \mathrm{Var}_k, \qquad E = \mathrm{Var} \Big/ \sum_{k=1}^{K} \Sigma_k \]
+  where $E$ is referred to as the prediction energy fraction.
+  \item VMAS selects frequencies with the largest variance: $f_\mathrm{next} = \arg\max {\left[\mathrm{Var}(f)\right]}$
+\end{itemize}
+
+\end{frame}

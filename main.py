@@ -151,7 +151,8 @@ def write_config(filename, config: dict):
             if usempi: prefix=f"[Rank {rank}]" 
             else: prefix=""
             print(prefix, filename, 
-                  'is corrupted: len(config_keys) != len(config_values)\n ' 
+                  'is corrupted: len(config_keys) != len(config_values): '
+                  f'{len(config_keys)} != {len(config_values)}\n '
                   'Will attempt to extend the shorter list to write config file. ' 
                   'The user is encouraged to check the configuration file afterwards.' 
             ) 

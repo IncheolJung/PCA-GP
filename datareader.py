@@ -599,7 +599,8 @@ class OnFlySolver:
         return 0
 
     def _find_index_from_angles(self, angle_query):
-        return [self.angles.index(a) for a in angle_query]
+        return np.where(np.asarray(self.angles)==np.asarray(angle_query))[0]
+        # return [self.angles.index(a) for a in angle_query]
     
     def _init_in_file(self, freq_query=1280, delay=0):
         time.sleep(delay)

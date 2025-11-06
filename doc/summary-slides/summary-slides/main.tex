@@ -1,0 +1,39 @@
+\documentclass[aspectratio=1610]{beamer}
+\input{mytheme.tex}
+
+\usepackage{pifont}
+\usepackage{multirow}
+\usepackage{animate}
+\usepackage{subcaption}
+
+\usepackage[backend=bibtex,style=ieee]{biblatex}
+\addbibresource{refs.bib}
+% \usepackage{bibentry}  % Enables inline full entries
+% \nobibliography*       % Needed to use \bibentry without printing whole bib
+
+\graphicspath{{Figures/}}
+
+\title[PGP-PCA for frequency sweep for \texttt{VWT-IE-Solver}]{MPI Parallelized Gaussian Process Regression for Efficient Frequency Interpolation for \texttt{VWT-IE-Solver}}
+\author[Aiden I. Jung]{Aiden Incheol Jung}
+\institute{
+  Department of Electric and Computer Engineering \\ 
+  University of Illinois Urbana--Champaign \\ % Your institution for the title page
+  \medskip
+  \textit{incheol3@illinois.edu}
+}
+
+\begin{document}
+
+\maketitle
+
+\input{Slides/introduction.tex}
+\input{Slides/theory.tex}
+\input{Slides/sequentialGP.tex}
+\input{Slides/parallelGP-workflow.tex}
+\input{Slides/parallelGP.tex}
+\input{Slides/demo-Tanker.tex}
+\input{Slides/demo-VWT-robustness.tex}
+\input{Slides/conclusion.tex}
+\input{Slides/appendix.tex}
+
+\end{document}

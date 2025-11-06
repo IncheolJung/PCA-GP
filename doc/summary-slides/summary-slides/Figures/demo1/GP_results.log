@@ -1,0 +1,74 @@
+
+ ======  Simulation 26 Initialized  ====== 
+
+  >> Simulation path: /home/shared/Codes/PCA-GP/data/VWT-data/prime
+  >> Adaptive basis: True
+  >> Acquisition function: maximum variance
+  >> X normalization strategy: z-score
+  >> Sampling strategy: grid
+  >> n_init: 3
+  >> terms: 3
+  >> max_iter: 20
+  >> tol: 0.001
+  >> angles theta: [start, end, step] = (0.0, 180.0, 1.0)
+
+ ======  Simulation 26 Initialized  ====== 
+
+number of basis updated: 3 -> 3
+S[0, r-1] =  0.24506434154573783 0.1312654160633955
+
+  >> Initial Frequencies: ['9500.0', '10000.0', '10500.0']
+
+
+Iteration 1 / 20: max_acquisition 0.0069463583 | pred_to_total_POD_energy_ratio 2.0529803539
+number of frequency samples: 3
+sampling new frequencies: [ 10250.000 ]
+number of basis updated: 3 -> 4
+S[0, r-1] =  0.29199391232065935 0.07860276198893172
+
+Iteration 2 / 20: max_acquisition 0.0022288264 | pred_to_total_POD_energy_ratio 1.2688747344
+number of frequency samples: 4
+sampling new frequencies: [ 9910.000 ]
+number of basis updated: 4 -> 5
+S[0, r-1] =  0.33354315462401496 0.014585995053192012
+
+Iteration 3 / 20: max_acquisition 0.0006587463 | pred_to_total_POD_energy_ratio 0.2499634638
+number of frequency samples: 5
+sampling new frequencies: [ 9750.000 ]
+number of basis updated: 5 -> 6
+S[0, r-1] =  0.37074832971165134 0.0036555185047901975
+
+Iteration 4 / 20: max_acquisition 0.0000834842 | pred_to_total_POD_energy_ratio 0.0584271679
+number of frequency samples: 6
+sampling new frequencies: [ 10390.000 ]
+number of basis updated: 6 -> 7
+S[0, r-1] =  0.393319301197153 0.0011362492329780479
+
+Iteration 5 / 20: max_acquisition 0.0000329790 | pred_to_total_POD_energy_ratio 0.0426447921
+number of frequency samples: 7
+sampling new frequencies: [ 9580.000 ]
+number of basis updated: 7 -> 8
+S[0, r-1] =  0.4158786892412728 0.000704487723034414
+
+Iteration 6 / 20: max_acquisition 0.0000213800 | pred_to_total_POD_energy_ratio 0.0408613641
+number of frequency samples: 8
+sampling new frequencies: [ 9840.000 ]
+number of basis updated: 8 -> 9
+S[0, r-1] =  0.4522058441920115 0.0002426350606525361
+
+Iteration 7 / 20: max_acquisition 0.0000002117 | pred_to_total_POD_energy_ratio 0.0006488974
+number of frequency samples: 9
+sampling new frequencies: [ 10140.000 ]
+
+ ======  Stopping criterion met.  ====== 
+
+  >> Final iteration:	7	/	20
+  >> Final acquisition:	2.1171048736262235e-07
+  >> Final pred_to_total_POD_energy_ratio:	0.0006488974171560157
+  >> total n_freq:	9
+
+ ======  Final Statistics  ====== 
+
+Predicted response shape: (101, 181)
+RMSE:0.000630582471
+Error scale: dB

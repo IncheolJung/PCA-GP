@@ -600,8 +600,20 @@ class OnFlySolver:
             self.farfields.update(new_farfield)
         return 0
 
-    def _find_index_from_angles(self, angle_query):
-        return [self.angles.index(a) for a in angle_query]
+    def _find_index_from_angles(self, angle_query, tol=1e-6):
+        angles = np.asarray(self.angles)
+        angle_query = np.atleast_1d(angle_query)
+        idx_list = []
+
+        for a in angle_query:
+            # find the index of the closest angle
+            diff = np.abs(angles - a)
+            idx = np.argmin(diff)
+            if diff[idx] > tol:
+                raise ValueError(f"No match found for angle {a} (closest diff={diff[idx]:.2e})")
+            idx_list.append(idx)
+
+        return idx_list
     
     def _init_in_file(self, freq_query=1280, delay=0):
         time.sleep(delay)

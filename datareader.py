@@ -485,8 +485,10 @@ class OnFlySolver:
             # print(f"[Rank {self.rank}] local_freq", local_freq)
             # print(f"[Rank {self.rank}] local_angle", local_angle)
             if local_freq is not None:
-                min_angles = np.array(local_angle).min(axis=-1)
-                max_angles = np.array(local_angle).max(axis=-1)
+                # min_angles = np.array(local_angle).min(axis=-1)
+                # max_angles = np.array(local_angle).max(axis=-1)
+                min_angles = [min(a) for a in local_angle]
+                max_angles = [max(a) for a in local_angle]
                 print(
                     f"[Rank {self.rank}] attempting to simulate on...",
                     *[f"    {f} MHz, [{min_a}, {max_a}] DEG" 
@@ -599,7 +601,6 @@ class OnFlySolver:
         return 0
 
     def _find_index_from_angles(self, angle_query):
-        # return [np.where(np.asarray(self.angles)==a)[0] for a in angle_query]
         return [self.angles.index(a) for a in angle_query]
     
     def _init_in_file(self, freq_query=1280, delay=0):

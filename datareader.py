@@ -132,7 +132,7 @@ class OnFlySolver:
         self.sweep_angle_type = sweep_angle_type
         if sweep_angle_type==0:     # phi-sweep
             self.phi = np.array(angles)
-            self.theta = 90*np.ones(len(angles))
+            self.theta = -90*np.ones(len(angles))
             self.angles = self.phi
         elif sweep_angle_type==1:   # theta-sweep
             self.phi = np.zeros(len(angles))
